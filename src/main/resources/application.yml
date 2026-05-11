@@ -9,5 +9,5 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 jwt:
-    secret: MySnapUpSecretKey2024!@#ABCDEFGHIJK1234567890  # 至少32个字符
+    secret: gjxgjxgjxgjxgjxgjxgjxgjxgjxgjxnb  # 至少32个字符
     expiration: 86400000
