@@ -16,7 +16,7 @@ public class MybatisPlusGenerator {
      * Spring Boot项目生成全部表示例，有调整可以自己修改
      */
     public static void generator3() {
-        FastAutoGenerator.create("jdbc:mysql://127.0.0.1:3306/graduation_project?useUnicode=true&useSSL=false&characterEncoding=utf8","root","123456")
+        FastAutoGenerator.create("jdbc:mysql://127.0.0.1:3306/graduation_project?useUnicode=true&useSSL=false&characterEncoding=utf8","root","000000")
                 .globalConfig(builder -> {
                     builder.outputDir((System.getProperty("user.dir")+"/src/main/java"))
                             .disableOpenDir()

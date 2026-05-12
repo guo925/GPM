@@ -21,5 +21,21 @@ public class JwtUtil {
         this.expiration = expiration;
     }
 
+    public String generateToken(Long userId) {
+        return Jwts.builder()
+                .claim("userId", userId)
+                .claim("role", "user")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(key)
+                .compact();
+    }
 
+    public Claims parseToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }
