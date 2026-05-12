@@ -5,9 +5,14 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/graduation_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: "000000"
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 jwt:
     secret: gjxgjxgjxgjxgjxgjxgjxgjxgjxgjxnb  # 至少32个字符
     expiration: 86400000
+
