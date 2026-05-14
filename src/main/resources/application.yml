@@ -13,16 +13,35 @@ spring:
       host: localhost
       port: 6379
       database: 0
-      timeout: 5000
-
+      timeout: 5s
 
 mybatis-plus:
-  mapper-locations: classpath:/mapper/*.xml
-  type-aliases-package: com.gjx.gpms.entity
+
+  # Mapper XML路径
+  mapper-locations: classpath*:mapper/**/*.xml
+
+  # 实体类别名扫描
+  type-aliases-package: com.gjx.gpms.*.entity
 
   configuration:
+
+    # 控制台SQL日志
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+  global-config:
+    db-config:
+
+      # 逻辑删除字段
+      logic-delete-field: isDeleted
+
+      # 已删除
+      logic-delete-value: 1
+
+      # 未删除
+      logic-not-delete-value: 0
 
 logging:
   level:
-    com.gjx.gpms.mapper: debug
+
+    # 项目日志级别
+    com.gjx.gpms: debug
