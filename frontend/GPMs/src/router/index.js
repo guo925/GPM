@@ -2,13 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getDashboardPath } from '@/stores/auth'
 
 function getRoles() {
-  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  const user = JSON.parse(sessionStorage.getItem('user') || 'null')
   return user?.roles || []
 }
 
 function isTokenValid() {
-  const token = localStorage.getItem('token')
-  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  const token = sessionStorage.getItem('token')
+  const user = JSON.parse(sessionStorage.getItem('user') || 'null')
   return token && user
 }
 
@@ -185,7 +185,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   const roles = getRoles()
 
   // 未登录 → 去登录页
@@ -196,8 +196,8 @@ router.beforeEach((to, from, next) => {
   if (to.path === '/login' && token) {
     // 如果 user 对象没有 roles，说明是旧 token，清除后重新登录
     if (!isTokenValid() || roles.length === 0) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
       return next('/login')
     }
     return next(getDashboardPath(roles))

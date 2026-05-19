@@ -30,8 +30,8 @@ export function hasAnyRole(roles, codes) {
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
-    user: JSON.parse(localStorage.getItem('user') || 'null')
+    token: sessionStorage.getItem('token') || '',
+    user: JSON.parse(sessionStorage.getItem('user') || 'null')
   }),
   getters: {
     roles: (state) => state.user?.roles || [],
@@ -44,8 +44,8 @@ export const useAuthStore = defineStore('auth', {
       const { token, userId, username, roles, permissions } = res.data
       this.token = token
       this.user = { userId, username, roles: roles || [], permissions: permissions || [] }
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(this.user))
+      sessionStorage.setItem('token', token)
+      sessionStorage.setItem('user', JSON.stringify(this.user))
       ElMessage.success('登录成功')
       return true
     },
@@ -53,8 +53,8 @@ export const useAuthStore = defineStore('auth', {
       try { await logoutApi() } catch {}
       this.token = ''
       this.user = null
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
     }
   }
 })
