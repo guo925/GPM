@@ -1,29 +1,36 @@
 <template>
-  <div>
-    <el-card>
-      <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span>批次管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>新增批次
-          </el-button>
-        </div>
-      </template>
-      <el-form :inline="true" :model="query" style="margin-bottom:16px">
-        <el-form-item label="批次名称">
-          <el-input v-model="query.name" placeholder="搜索" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="query.status" placeholder="全部" clearable style="width:120px">
-            <el-option label="进行中" :value="1" />
-            <el-option label="已结束" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-        </el-form-item>
-      </el-form>
-      <el-table :data="tableData" v-loading="loading" border>
+  <div class="workspace-page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">批次管理</h1>
+        <p class="page-subtitle">毕业设计批次、阶段推进和选题规则维护</p>
+      </div>
+      <div v-if="canManageBatch" class="page-actions">
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>新增批次
+        </el-button>
+      </div>
+    </div>
+
+    <el-card class="table-card">
+      <div class="toolbar-form">
+        <el-form :inline="true" :model="query">
+          <el-form-item label="批次名称">
+            <el-input v-model="query.name" placeholder="输入批次名称" clearable style="width:220px" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="query.status" placeholder="全部状态" clearable style="width:140px">
+              <el-option label="进行中" :value="1" />
+              <el-option label="已结束" :value="0" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadData">查询</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <el-table :data="tableData" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="批次名称" />
         <el-table-column prop="grade" label="年级" width="100" />
@@ -41,22 +48,23 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280">
+        <el-table-column v-if="canManageBatch || canAdvanceBatch" label="操作" width="260" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" text @click="handleEdit(row)">编辑</el-button>
-            <el-button type="success" text @click="handleStage(row)">推进阶段</el-button>
-            <el-button type="danger" text @click="handleDelete(row)">删除</el-button>
+            <el-button v-if="canManageBatch" type="primary" text @click="handleEdit(row)">编辑</el-button>
+            <el-button v-if="canAdvanceBatch" type="success" text @click="handleStage(row)">推进阶段</el-button>
+            <el-button v-if="canManageBatch" type="danger" text @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        style="margin-top:16px;justify-content:flex-end"
-        v-model:current-page="query.current"
-        v-model:page-size="query.size"
-        :total="total"
-        layout="total, prev, pager, next, sizes"
-        @change="loadData"
-      />
+      <div class="table-footer">
+        <el-pagination
+          v-model:current-page="query.current"
+          v-model:page-size="query.size"
+          :total="total"
+          layout="total, prev, pager, next, sizes"
+          @change="loadData"
+        />
+      </div>
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑批次' : '新增批次'" width="700px">
@@ -156,6 +164,11 @@ import { Plus } from '@element-plus/icons-vue'
 import { getBatchPage, createBatch, updateBatch, deleteBatch, advanceStage } from '@/api/batch'
 import { getCollegeList } from '@/api/college'
 import { getMajorList } from '@/api/major'
+import { useAuthStore, hasAnyRole } from '@/stores/auth'
+
+const authStore = useAuthStore()
+const canManageBatch = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN']))
+const canAdvanceBatch = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'GRADE_ADMIN']))
 
 const stageMap = {
   topic_selection: '选题阶段',
@@ -240,6 +253,7 @@ const loadData = async () => {
 }
 
 const handleAdd = () => {
+  if (!canManageBatch.value) return
   isEdit.value = false
   editId.value = null
   form.value = {
@@ -251,6 +265,7 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row) => {
+  if (!canManageBatch.value) return
   isEdit.value = true
   editId.value = row.id
   form.value = {
@@ -266,6 +281,7 @@ const handleEdit = (row) => {
 }
 
 const handleStage = (row) => {
+  if (!canAdvanceBatch.value) return
   currentBatch.value = row
   nextStage.value = ''
   stageVisible.value = true
@@ -283,6 +299,7 @@ const handleAdvanceStage = async () => {
 }
 
 const handleDelete = async (row) => {
+  if (!canManageBatch.value) return
   await ElMessageBox.confirm('确定删除该批次吗？', '提示', { type: 'warning' })
   await deleteBatch(row.id)
   ElMessage.success('删除成功')
@@ -303,7 +320,9 @@ const handleSubmit = async () => {
 }
 
 onMounted(async () => {
-  await loadCollegesAndMajors()
+  if (canManageBatch.value) {
+    await loadCollegesAndMajors()
+  }
   loadData()
 })
 </script>

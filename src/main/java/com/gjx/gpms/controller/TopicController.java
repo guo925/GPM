@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 课题管理Controller
  *
@@ -35,6 +37,20 @@ public class TopicController {
             @RequestParam(required = false) Long batchId,
             @RequestParam(required = false) String status) {
         return Result.success(topicService.page(current, size, batchId, status));
+    }
+
+    @Operation(summary = "热门课题列表")
+    @PreAuthorize("hasAuthority('topic:page')")
+    @GetMapping("/hot")
+    public Result<List<TopicVO>> hot() {
+        return Result.success(topicService.getHotTopics());
+    }
+
+    @Operation(summary = "课题详情")
+    @PreAuthorize("hasAuthority('topic:page')")
+    @GetMapping("/{id}")
+    public Result<TopicVO> getDetail(@PathVariable Long id) {
+        return Result.success(topicService.getDetail(id));
     }
 
     @Operation(summary = "新增课题")

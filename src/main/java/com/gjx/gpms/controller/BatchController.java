@@ -44,6 +44,13 @@ public class BatchController {
         return Result.success(batchService.getDetail(id));
     }
 
+    @Operation(summary = "当前批次")
+    @PreAuthorize("hasAuthority('batch:query')")
+    @GetMapping("/current")
+    public Result<BatchVO> getCurrentBatch() {
+        return Result.success(batchService.getCurrentBatch());
+    }
+
     @Operation(summary = "新增批次")
     @PreAuthorize("hasAuthority('batch:add')")
     @PostMapping("/create")

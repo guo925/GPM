@@ -16,6 +16,12 @@
       <el-table v-if="records.length" :data="records" border stripe>
         <el-table-column prop="weekNumber" label="周次" width="80" />
         <el-table-column prop="content" label="内容" min-width="200" show-overflow-tooltip />
+        <el-table-column label="附件" width="110">
+          <template #default="{ row }">
+            <el-link v-if="row.filePath" type="primary" :href="getFileViewUrl(row.filePath)" target="_blank">查看</el-link>
+            <span v-else style="color:#909399">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="createdAt" label="提交时间" width="160" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
@@ -54,6 +60,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { getStudentTopicPage } from '@/api/studentTopic'
 import { getGuidanceList, reviewGuidance } from '@/api/guidance'
+import { getFileViewUrl } from '@/api/file'
 
 const authStore = useAuthStore()
 const students = ref([])

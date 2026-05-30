@@ -14,10 +14,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
-import com.gjx.gpms.common.utils.RedisUtil;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 
+import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 /**
  * 认证服务实现类
  */
@@ -36,7 +37,7 @@ public class AuthServiceImpl implements AuthService {
      */
     private final JwtUtil jwtUtil;
 
-    private final RedisUtil redisUtil;
+    private final RedisCacheService redisCacheService;
 
     private final UserRoleMapper userRoleMapper;
 
@@ -63,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
         // 查询用户真实角色
         List<String> roles = userRoleMapper.selectRoleCodesByUserId(loginUser.getUserId());
         List<String> permissions = loginUser.getPermissionCodes();
+        loginUser.setRoleCodes(roles);
 
         // 生成JWT（含权限，兼容无Redis场景）
         String token = jwtUtil.generateToken(
@@ -76,7 +78,8 @@ public class AuthServiceImpl implements AuthService {
 
         // 尝试存入Redis（非必须）
         try {
-            redisUtil.set("login:token:" + loginUser.getUserId(), loginUser, 24, TimeUnit.HOURS);
+            redisCacheService.set(CacheKeys.loginToken(token), loginUser, Duration.ofHours(24));
+            redisCacheService.set(CacheKeys.loginTokenByUserId(loginUser.getUserId()), token, Duration.ofHours(24));
             log.info("用户登录信息已存入Redis");
         } catch (Exception e) {
             log.warn("Redis不可用，跳过缓存：{}", e.getMessage());

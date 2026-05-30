@@ -62,7 +62,10 @@ public class JwtUtil {
         user.setUsername(claims.get("username").toString());
         @SuppressWarnings("unchecked")
         List<String> perms = (List<String>) claims.get("permissions");
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) claims.get("roles");
         user.setPermissionCodes(perms != null ? perms : List.of());
+        user.setRoleCodes(roles != null ? roles : List.of());
         return user;
     }
 

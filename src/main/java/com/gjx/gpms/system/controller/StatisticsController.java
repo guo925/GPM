@@ -1,6 +1,8 @@
 package com.gjx.gpms.system.controller;
 
 import com.gjx.gpms.common.result.Result;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.system.vo.StatisticsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.time.Duration;
 
 @Tag(name = "数据统计")
 @RestController
@@ -18,11 +21,23 @@ import java.util.*;
 public class StatisticsController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final RedisCacheService redisCacheService;
 
     @Operation(summary = "获取总览统计数据")
     @GetMapping("/overview")
     @PreAuthorize("hasAuthority('batch:page')")
     public Result<StatisticsVO> overview() {
+        StatisticsVO cached = redisCacheService.getOrLoad(
+                CacheKeys.DASHBOARD_STATISTICS,
+                StatisticsVO.class,
+                Duration.ofMinutes(5),
+                60,
+                this::buildOverview
+        );
+        return Result.success(cached);
+    }
+
+    private StatisticsVO buildOverview() {
         StatisticsVO vo = new StatisticsVO();
 
         // 学院/专业
@@ -85,7 +100,7 @@ public class StatisticsController {
         }
         vo.setScoreDistribution(scoreDist);
 
-        return Result.success(vo);
+        return vo;
     }
 
     private Integer count(String table) {

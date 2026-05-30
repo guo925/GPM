@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gjx.gpms.common.exception.BusinessException;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.dto.BatchCreateDTO;
 import com.gjx.gpms.dto.BatchUpdateDTO;
 import com.gjx.gpms.entity.Batch;
@@ -22,6 +24,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.time.Duration;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +39,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
 
     private final CollegeMapper collegeMapper;
     private final MajorMapper majorMapper;
+    private final RedisCacheService redisCacheService;
 
     @Override
     public IPage<BatchVO> page(long current, long size, String name, Integer status) {
@@ -87,6 +91,28 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
     }
 
     @Override
+    public BatchVO getCurrentBatch() {
+        return redisCacheService.getOrLoad(
+                CacheKeys.BATCH_CURRENT,
+                BatchVO.class,
+                Duration.ofMinutes(30),
+                120,
+                () -> {
+                    Batch current = this.getOne(
+                            new LambdaQueryWrapper<Batch>()
+                                    .eq(Batch::getStatus, (byte) 1)
+                                    .orderByDesc(Batch::getCreatedAt)
+                                    .last("LIMIT 1")
+                    );
+                    if (current == null) {
+                        return null;
+                    }
+                    return getDetail(current.getId());
+                }
+        );
+    }
+
+    @Override
     public void create(BatchCreateDTO dto) {
         log.info("新增批次：{}", dto.getName());
 
@@ -97,6 +123,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         entity.setCreatedBy(UserContext.getUserId());
 
         this.save(entity);
+        redisCacheService.delete(CacheKeys.BATCH_CURRENT);
 
         log.info("新增批次成功：{}", dto.getName());
     }
@@ -118,6 +145,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         if (dto.getAllowTeacherReject() != null) entity.setAllowTeacherReject(dto.getAllowTeacherReject().byteValue());
         if (dto.getRejectStrategy() != null) entity.setRejectStrategy(dto.getRejectStrategy());
         this.updateById(entity);
+        redisCacheService.delete(CacheKeys.BATCH_CURRENT);
 
         log.info("修改批次成功：{}", dto.getId());
     }
@@ -129,6 +157,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
             throw new BusinessException("批次不存在");
         }
         this.removeById(id);
+        redisCacheService.delete(CacheKeys.BATCH_CURRENT);
         log.info("删除批次成功：{}", id);
     }
 
@@ -140,6 +169,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         }
         entity.setCurrentStage(nextStage);
         this.updateById(entity);
+        redisCacheService.delete(CacheKeys.BATCH_CURRENT);
         log.info("批次[{}]阶段推进至：{}", id, nextStage);
     }
 }

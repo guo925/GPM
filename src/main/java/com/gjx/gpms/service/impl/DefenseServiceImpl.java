@@ -105,8 +105,13 @@ public class DefenseServiceImpl implements DefenseService {
 
     @Override
     public void addArrangement(Long groupId, Long studentId, String defenseTime, String location) {
+        DefenseGroup group = defenseGroupMapper.selectById(groupId);
+        if (group == null) {
+            throw new BusinessException("答辩组不存在");
+        }
         DefenseArrangement da = new DefenseArrangement();
         da.setGroupId(groupId);
+        da.setDefenseBatchId(group.getDefenseBatchId());
         da.setStudentId(studentId);
         da.setDefenseTime(defenseTime != null ? java.time.LocalDateTime.parse(defenseTime) : null);
         da.setLocation(location);

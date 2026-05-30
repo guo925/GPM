@@ -8,6 +8,8 @@ import com.gjx.gpms.dto.ProcessSubmitDTO;
 import com.gjx.gpms.entity.ProcessInstance;
 import com.gjx.gpms.entity.StudentTopic;
 import com.gjx.gpms.entity.Topic;
+import com.gjx.gpms.entity.AuditLog;
+import com.gjx.gpms.mapper.AuditLogMapper;
 import com.gjx.gpms.mapper.ProcessInstanceMapper;
 import com.gjx.gpms.mapper.StudentTopicMapper;
 import com.gjx.gpms.mapper.TopicMapper;
@@ -38,6 +40,7 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
     private final StudentTopicMapper studentTopicMapper;
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
+    private final AuditLogMapper auditLogMapper;
 
     @Override
     public void submit(ProcessSubmitDTO dto) {
@@ -121,6 +124,15 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         }
 
         this.updateById(pi);
+        AuditLog auditLog = new AuditLog();
+        auditLog.setProcessInstanceId(pi.getId());
+        auditLog.setTargetType(pi.getStage());
+        auditLog.setTargetId(pi.getId());
+        auditLog.setAuditorId(userId);
+        auditLog.setAction("approved".equals(dto.getStatus()) ? "approve" : "reject");
+        auditLog.setComment(dto.getReviewComment());
+        auditLog.setCreatedAt(LocalDateTime.now());
+        auditLogMapper.insert(auditLog);
         log.info("流程实例[{}]审核完成：{}", dto.getId(), dto.getStatus());
     }
 

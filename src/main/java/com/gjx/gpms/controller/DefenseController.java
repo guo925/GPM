@@ -25,6 +25,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DefenseController {
 
+    private static final String DEFENSE_MANAGE_ROLES =
+            "hasAnyRole('SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER')";
+
     private final DefenseService defenseService;
 
     @Operation(summary = "答辩批次列表")
@@ -34,7 +37,7 @@ public class DefenseController {
     }
 
     @Operation(summary = "创建答辩批次")
-    @PreAuthorize("hasAuthority('defense:batch:add')")
+    @PreAuthorize("hasAuthority('defense:batch:add') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/batch/create")
     public Result<Void> createBatch(@Valid @RequestBody DefenseBatchDTO dto) {
         defenseService.createBatch(dto);
@@ -42,7 +45,7 @@ public class DefenseController {
     }
 
     @Operation(summary = "删除答辩批次")
-    @PreAuthorize("hasAuthority('defense:batch:delete')")
+    @PreAuthorize("hasAuthority('defense:batch:delete') or " + DEFENSE_MANAGE_ROLES)
     @DeleteMapping("/batch/{id}")
     public Result<Void> deleteBatch(@PathVariable Long id) {
         defenseService.deleteBatch(id);
@@ -56,7 +59,7 @@ public class DefenseController {
     }
 
     @Operation(summary = "创建答辩组")
-    @PreAuthorize("hasAuthority('defense:group:add')")
+    @PreAuthorize("hasAuthority('defense:group:add') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/group/create")
     public Result<Void> createGroup(@Valid @RequestBody DefenseGroupDTO dto) {
         defenseService.createGroup(dto);
@@ -64,7 +67,7 @@ public class DefenseController {
     }
 
     @Operation(summary = "删除答辩组")
-    @PreAuthorize("hasAuthority('defense:group:delete')")
+    @PreAuthorize("hasAuthority('defense:group:delete') or " + DEFENSE_MANAGE_ROLES)
     @DeleteMapping("/group/{id}")
     public Result<Void> deleteGroup(@PathVariable Long id) {
         defenseService.deleteGroup(id);
@@ -78,7 +81,7 @@ public class DefenseController {
     }
 
     @Operation(summary = "添加答辩安排")
-    @PreAuthorize("hasAuthority('defense:arrange')")
+    @PreAuthorize("hasAuthority('defense:arrange') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/arrange")
     public Result<Void> addArrangement(@RequestBody Map<String, Object> params) {
         defenseService.addArrangement(
@@ -91,7 +94,7 @@ public class DefenseController {
     }
 
     @Operation(summary = "录入答辩结果")
-    @PreAuthorize("hasAuthority('defense:result')")
+    @PreAuthorize("hasAuthority('defense:result') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/result")
     public Result<Void> saveResult(@Valid @RequestBody DefenseResultDTO dto) {
         defenseService.saveResult(dto);

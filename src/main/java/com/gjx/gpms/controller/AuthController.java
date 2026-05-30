@@ -1,7 +1,8 @@
 package com.gjx.gpms.controller;
 
 import com.gjx.gpms.common.result.Result;
-import com.gjx.gpms.common.utils.RedisUtil;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.dto.LoginDTO;
 import com.gjx.gpms.security.model.LoginUser;
 import com.gjx.gpms.security.util.JwtUtil;
@@ -28,7 +29,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
-    private final RedisUtil redisUtil;
+    private final RedisCacheService redisCacheService;
     private final UserRoleMapper userRoleMapper;
 
     @PostMapping("/login")
@@ -48,7 +49,10 @@ public class AuthController {
         try {
             Claims claims = jwtUtil.parseToken(token);
             Long userId = Long.valueOf(claims.get("userId").toString());
-            try { redisUtil.delete("login:token:" + userId); } catch (Exception ignored) {}
+            try {
+                redisCacheService.delete(CacheKeys.loginToken(token));
+                redisCacheService.delete(CacheKeys.loginTokenByUserId(userId));
+            } catch (Exception ignored) {}
         } catch (Exception e) {
             return Result.error("Token无效");
         }

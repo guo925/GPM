@@ -1,37 +1,44 @@
 <template>
-  <div>
-    <el-card>
-      <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span>课题管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>新增课题
-          </el-button>
-        </div>
-      </template>
-      <el-form :inline="true" :model="query" style="margin-bottom:16px">
-        <el-form-item label="批次">
-          <el-select v-model="query.batchId" placeholder="全部" clearable style="width:200px" @change="loadData">
-            <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="query.status" placeholder="全部" clearable style="width:120px">
-            <el-option label="待审核" value="pending" />
-            <el-option label="已通过" value="approved" />
-            <el-option label="已拒绝" value="rejected" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-        </el-form-item>
-        <el-form-item v-if="isStudent && selectedIds.length > 0">
-          <el-button type="success" @click="submitSelections" :loading="submitting">
-            提交志愿（已选 {{ selectedIds.length }}/3）
-          </el-button>
-        </el-form-item>
-      </el-form>
-      <el-table :data="tableData" v-loading="loading" border @selection-change="onSelectionChange" ref="tableRef">
+  <div class="workspace-page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">课题管理</h1>
+        <p class="page-subtitle">课题申报、审核、容量与学生志愿选择</p>
+      </div>
+      <div v-if="canCreateTopic" class="page-actions">
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>新增课题
+        </el-button>
+      </div>
+    </div>
+
+    <el-card class="table-card">
+      <div class="toolbar-form">
+        <el-form :inline="true" :model="query">
+          <el-form-item label="批次">
+            <el-select v-model="query.batchId" placeholder="全部批次" clearable style="width:240px" @change="loadData">
+              <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="query.status" placeholder="全部状态" clearable style="width:140px">
+              <el-option label="待审核" value="pending" />
+              <el-option label="已通过" value="approved" />
+              <el-option label="已拒绝" value="rejected" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadData">查询</el-button>
+          </el-form-item>
+          <el-form-item v-if="isStudent && selectedIds.length > 0">
+            <el-button type="success" @click="submitSelections" :loading="submitting">
+              提交志愿（{{ selectedIds.length }}/3）
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <el-table :data="tableData" v-loading="loading" stripe @selection-change="onSelectionChange" ref="tableRef">
         <el-table-column v-if="isStudent" type="selection" width="50" :selectable="canSelect" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="batchName" label="批次" />
@@ -54,7 +61,7 @@
         <el-table-column prop="currentCount" label="已选/容量" width="100">
           <template #default="{ row }">{{ row.currentCount }}/{{ row.maxCapacity }}</template>
         </el-table-column>
-        <el-table-column label="操作" :width="isStudent ? 300 : 220">
+        <el-table-column label="操作" :width="isStudent ? 280 : 220" fixed="right">
           <template #default="{ row }">
             <!-- 学生：选择课题按钮 -->
             <template v-if="isStudent && row.status === 'approved'">
@@ -67,23 +74,24 @@
               <el-tag v-else-if="submittedIds.includes(row.id)" type="success" size="small">已选</el-tag>
             </template>
             <!-- 管理员/教师：管理按钮 -->
-            <template v-if="!isStudent || authStore.isSuperAdmin">
-              <el-button type="primary" text @click="handleEdit(row)" v-if="row.status !== 'approved'">编辑</el-button>
-              <el-button type="success" text @click="handleReview(row, 'approved')" v-if="row.status === 'pending'">通过</el-button>
-              <el-button type="danger" text @click="handleReview(row, 'rejected')" v-if="row.status === 'pending'">拒绝</el-button>
-              <el-button type="danger" text @click="handleDelete(row)">删除</el-button>
+            <template v-if="!isStudent">
+              <el-button v-if="canEditTopic && row.status !== 'approved'" type="primary" text @click="handleEdit(row)">编辑</el-button>
+              <el-button v-if="canReviewTopic && row.status === 'pending'" type="success" text @click="handleReview(row, 'approved')">通过</el-button>
+              <el-button v-if="canReviewTopic && row.status === 'pending'" type="danger" text @click="handleReview(row, 'rejected')">拒绝</el-button>
+              <el-button v-if="canDeleteTopic" type="danger" text @click="handleDelete(row)">删除</el-button>
             </template>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination
-        style="margin-top:16px;justify-content:flex-end"
-        v-model:current-page="query.current"
-        v-model:page-size="query.size"
-        :total="total"
-        layout="total, prev, pager, next, sizes"
-        @change="loadData"
-      />
+      <div class="table-footer">
+        <el-pagination
+          v-model:current-page="query.current"
+          v-model:page-size="query.size"
+          :total="total"
+          layout="total, prev, pager, next, sizes"
+          @change="loadData"
+        />
+      </div>
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑课题' : '新增课题'" width="600px">
@@ -124,10 +132,14 @@ import { Plus } from '@element-plus/icons-vue'
 import { getTopicPage, createTopic, updateTopic, deleteTopic, reviewTopic } from '@/api/topic'
 import { getBatchPage } from '@/api/batch'
 import { submitPreferences, getMySelections } from '@/api/selection'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, hasAnyRole } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const isStudent = computed(() => authStore.roles.includes('STUDENT'))
+const canCreateTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'TEACHER']))
+const canEditTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'TEACHER']))
+const canDeleteTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'TEACHER']))
+const canReviewTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN']))
 
 const loading = ref(false)
 const tableData = ref([])
@@ -229,6 +241,7 @@ const loadData = async () => {
 }
 
 const handleAdd = () => {
+  if (!canCreateTopic.value) return
   isEdit.value = false
   editId.value = null
   form.value = { batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1 }
@@ -236,6 +249,7 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row) => {
+  if (!canEditTopic.value) return
   isEdit.value = true
   editId.value = row.id
   form.value = { batchId: row.batchId, title: row.title, description: row.description, source: row.source, maxCapacity: row.maxCapacity }
@@ -243,12 +257,14 @@ const handleEdit = (row) => {
 }
 
 const handleReview = async (row, status) => {
+  if (!canReviewTopic.value) return
   await reviewTopic({ id: row.id, status, reviewComment: status === 'approved' ? '审核通过' : '审核不通过' })
   ElMessage.success('操作成功')
   loadData()
 }
 
 const handleDelete = async (row) => {
+  if (!canDeleteTopic.value) return
   await ElMessageBox.confirm('确定删除该课题吗？', '提示', { type: 'warning' })
   await deleteTopic(row.id)
   ElMessage.success('删除成功')

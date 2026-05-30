@@ -1,59 +1,34 @@
 <template>
   <div class="dashboard">
-    <h3>校级管理员工作台</h3>
-    <el-row :gutter="20">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>学院管理</template>
-          <p>管理全校学院信息，添加/修改/删除学院</p>
-          <el-button type="primary" @click="$router.push('/system/college')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>专业管理</template>
-          <p>管理各学院下属专业信息</p>
-          <el-button type="primary" @click="$router.push('/system/major')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>用户管理</template>
-          <p>管理全校用户账号，分配院级管理员等角色</p>
-          <el-button type="primary" @click="$router.push('/system/user')">进入</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
-    <el-row :gutter="20" style="margin-top:20px">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>批次管理</template>
-          <p>创建和管理毕业设计批次，设定各阶段参数</p>
-          <el-button type="primary" @click="$router.push('/batch')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>课题管理</template>
-          <p>查看全校课题库，审核课题申报</p>
-          <el-button type="primary" @click="$router.push('/topic')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>数据统计</template>
-          <p>查看全校毕业设计进度统计报表</p>
-          <el-button type="primary" @click="$router.push('/statistics')">进入</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">校级管理员工作台</h1>
+        <p class="page-subtitle">维护全校基础数据、毕业设计批次和过程监管</p>
+      </div>
+    </div>
+
+    <div class="action-grid">
+      <div v-for="item in actions" :key="item.path" class="action-card">
+        <div class="action-card__icon"><el-icon><component :is="item.icon" /></el-icon></div>
+        <h2 class="action-card__title">{{ item.title }}</h2>
+        <p class="action-card__meta">{{ item.desc }}</p>
+        <el-button type="primary" @click="router.push(item.path)">进入</el-button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-</script>
+import { useRouter } from 'vue-router'
+import { OfficeBuilding, Grid, User, Tickets, Collection, DataAnalysis } from '@element-plus/icons-vue'
 
-<style scoped>
-.dashboard h3 { margin-bottom: 20px; color: #303133; }
-p { color: #909399; margin-bottom: 12px; }
-</style>
+const router = useRouter()
+const actions = [
+  { title: '学院管理', desc: '维护学院编码、名称和排序，用于用户、专业和批次归属。', path: '/system/college', icon: OfficeBuilding },
+  { title: '专业管理', desc: '维护全校专业信息，按学院组织专业基础数据。', path: '/system/major', icon: Grid },
+  { title: '用户管理', desc: '创建并维护管理员、教师和学生账号。', path: '/system/user', icon: User },
+  { title: '批次管理', desc: '创建毕业设计批次，配置选题规则并推进阶段。', path: '/batch', icon: Tickets },
+  { title: '课题管理', desc: '查看课题库并审核各单位提交的课题。', path: '/topic', icon: Collection },
+  { title: '数据统计', desc: '查看全校毕业设计选题、流程和成绩概览。', path: '/statistics', icon: DataAnalysis }
+]
+</script>

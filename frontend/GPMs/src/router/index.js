@@ -122,6 +122,48 @@ const router = createRouter({
           component: () => import('@/views/Statistics.vue'),
           meta: { title: '数据统计' }
         },
+        {
+          path: 'log/statistics',
+          name: 'LogStatistics',
+          component: () => import('@/views/log/LogStatistics.vue'),
+          meta: { title: '日志统计', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN'] }
+        },
+        {
+          path: 'announcement',
+          name: 'AnnouncementManage',
+          component: () => import('@/views/announcement/AnnouncementManage.vue'),
+          meta: { title: '公告管理', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN'] }
+        },
+        {
+          path: 'notification',
+          name: 'NotificationCenter',
+          component: () => import('@/views/notification/NotificationCenter.vue'),
+          meta: { title: '通知中心' }
+        },
+        {
+          path: 'log/audit',
+          name: 'AuditLogList',
+          component: () => import('@/views/log/AuditLogList.vue'),
+          meta: { title: '审核日志', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN'] }
+        },
+        {
+          path: 'defense',
+          name: 'DefenseManage',
+          component: () => import('@/views/defense/DefenseManage.vue'),
+          meta: { title: '答辩管理', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'archive',
+          name: 'ArchiveManage',
+          component: () => import('@/views/archive/ArchiveManage.vue'),
+          meta: { title: '归档管理', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN'] }
+        },
+        {
+          path: 'export',
+          name: 'ExportCenter',
+          component: () => import('@/views/export/ExportCenter.vue'),
+          meta: { title: '导出中心', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
         // 专业管理监控
         {
           path: 'major/monitor',

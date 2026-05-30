@@ -25,9 +25,8 @@ public class ScoreController {
     @Operation(summary = "计算/更新成绩")
     @PreAuthorize("hasAuthority('score:calculate')")
     @PostMapping("/calculate")
-    public Result<Void> calculate(@Valid @RequestBody ScoreSheetDTO dto) {
-        scoreService.calculate(dto);
-        return Result.success();
+    public Result<ScoreSheetVO> calculate(@Valid @RequestBody ScoreSheetDTO dto) {
+        return Result.success(scoreService.calculate(dto));
     }
 
     @Operation(summary = "提交成绩")

@@ -38,7 +38,7 @@
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :disabled="!canSubmit" :loading="submitting" @click="handleSubmit">
-              提交（已选 {{ form.topicIds.length }} 个志愿）
+              {{ submitting ? '处理中' : `提交（已选 ${form.topicIds.length} 个志愿）` }}
             </el-button>
             <span style="margin-left:12px;color:#909399;font-size:13px">按勾选顺序作为优先级</span>
           </el-form-item>
@@ -112,9 +112,10 @@ const handleSubmit = async () => {
       batchId: form.batchId,
       topicIds: form.topicIds
     })
-    ElMessage.success('志愿提交成功')
+    ElMessage.success('选题请求已提交，正在处理中')
     form.topicIds = []
     await onBatchChange(form.batchId)
+    setTimeout(() => onBatchChange(form.batchId), 1500)
   } catch {
     ElMessage.error('提交失败')
   } finally {

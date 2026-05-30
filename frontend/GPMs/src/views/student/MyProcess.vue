@@ -19,6 +19,9 @@
           </template>
           <div v-if="s.data">
             <p v-if="s.data.content" class="stage-content">{{ truncate(s.data.content, 100) }}</p>
+            <el-link v-if="s.data.filePath" type="primary" :href="getFileViewUrl(s.data.filePath)" target="_blank">
+              查看附件
+            </el-link>
             <p style="color:#909399;font-size:12px">
               提交时间：{{ s.data.submittedAt || '-' }}
               <span v-if="s.data.version > 1"> | 版本：{{ s.data.version }}</span>
@@ -41,13 +44,26 @@
         <el-form-item label="内容">
           <el-input v-model="dialog.form.content" type="textarea" :rows="5" placeholder="请输入提交内容" />
         </el-form-item>
-        <el-form-item label="附件链接（可选）">
-          <el-input v-model="dialog.form.filePath" placeholder="文件路径" />
+        <el-form-item label="附件">
+          <el-upload
+            class="upload-block"
+            :show-file-list="false"
+            :http-request="uploadProcessFile"
+            :before-upload="beforeUpload"
+          >
+            <el-button :loading="dialog.uploading">
+              <el-icon><Upload /></el-icon>
+              选择文件
+            </el-button>
+          </el-upload>
+          <el-link v-if="dialog.fileName" class="file-link" type="primary" :href="getFileViewUrl(dialog.form.filePath)" target="_blank">
+            {{ dialog.fileName }}
+          </el-link>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialog.visible = false">取消</el-button>
-        <el-button type="primary" :loading="dialog.loading" @click="handleSubmitStage">提交</el-button>
+        <el-button type="primary" :loading="dialog.loading" :disabled="dialog.uploading" @click="handleSubmitStage">提交</el-button>
       </template>
     </el-dialog>
   </div>
@@ -56,8 +72,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Upload } from '@element-plus/icons-vue'
 import { getMyTopic } from '@/api/studentTopic'
 import { getProcessList, submitProcess } from '@/api/process'
+import { uploadFile, getFileViewUrl } from '@/api/file'
 
 const STAGE_MAP = [
   { stage: 'task_book', label: '任务书' },
@@ -80,6 +98,8 @@ const dialog = reactive({
   visible: false,
   stageLabel: '',
   loading: false,
+  uploading: false,
+  fileName: '',
   form: { studentTopicId: null, stage: '', content: '', filePath: '' }
 })
 
@@ -106,11 +126,42 @@ const fetchData = async () => {
 
 const openSubmit = (s) => {
   dialog.stageLabel = s.label
+  dialog.fileName = ''
   dialog.form = { studentTopicId: studentTopicId.value, stage: s.stage, content: '', filePath: '' }
   dialog.visible = true
 }
 
+const beforeUpload = (file) => {
+  const allowed = ['pdf', 'doc', 'docx', 'wps', 'xls', 'xlsx', 'et', 'ppt', 'pptx', 'dps', 'txt', 'zip', 'rar', 'png', 'jpg', 'jpeg']
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!allowed.includes(ext)) {
+    ElMessage.warning('不支持的文件类型')
+    return false
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    ElMessage.warning('文件大小不能超过50MB')
+    return false
+  }
+  return true
+}
+
+const uploadProcessFile = async ({ file }) => {
+  dialog.uploading = true
+  try {
+    const res = await uploadFile(file, 'process')
+    dialog.form.filePath = res.data.url
+    dialog.fileName = res.data.originalName
+    ElMessage.success('附件上传成功')
+  } finally {
+    dialog.uploading = false
+  }
+}
+
 const handleSubmitStage = async () => {
+  if (dialog.uploading) {
+    ElMessage.warning('附件正在上传，请稍后提交')
+    return
+  }
   dialog.loading = true
   try {
     await submitProcess(dialog.form)
@@ -133,5 +184,7 @@ onMounted(fetchData)
 .stage-card { min-height: 160px; }
 .stage-card .stage-header { display: flex; justify-content: space-between; align-items: center; }
 .stage-content { color: #606266; font-size: 13px; margin: 0 0 8px 0; }
+.upload-block { margin-right: 10px; }
+.file-link { margin-left: 12px; vertical-align: middle; }
 @media (max-width: 1200px) { .stage-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>

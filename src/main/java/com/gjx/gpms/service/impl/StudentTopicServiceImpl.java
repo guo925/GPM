@@ -90,6 +90,9 @@ public class StudentTopicServiceImpl extends ServiceImpl<StudentTopicMapper, Stu
                 new LambdaQueryWrapper<StudentTopic>()
                         .eq(StudentTopic::getStudentId, studentId)
                         .eq(StudentTopic::getStatus, "active")
+                        .orderByDesc(StudentTopic::getAllocationTime)
+                        .orderByDesc(StudentTopic::getCreatedAt)
+                        .last("LIMIT 1")
         );
 
         if (st == null) {

@@ -1,13 +1,15 @@
 package com.gjx.gpms.controller;
 
 import com.gjx.gpms.common.result.Result;
+import com.gjx.gpms.dto.PlagiarismCheckDTO;
+import com.gjx.gpms.service.PlagiarismCheckService;
+import com.gjx.gpms.vo.PlagiarismCheckVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 /**
  * 查重Controller
@@ -18,16 +20,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PlagiarismCheckController {
 
+    private final PlagiarismCheckService plagiarismCheckService;
+
     @Operation(summary = "提交查重")
     @PreAuthorize("hasAuthority('plagiarism:check')")
     @PostMapping("/check")
-    public Result<Map<String, Object>> check(@RequestBody Map<String, Object> params) {
-        // 对接查重服务（知网、维普等）
-        // 当前返回模拟结果
-        return Result.success(Map.of(
-                "similarity", 12.5,
-                "status", "pass",
-                "reportUrl", ""
-        ));
+    public Result<PlagiarismCheckVO> check(@Valid @RequestBody PlagiarismCheckDTO dto) {
+        return Result.success(plagiarismCheckService.check(dto));
     }
 }

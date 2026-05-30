@@ -4,8 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.common.exception.BusinessException;
-import com.gjx.gpms.common.utils.RedisUtil;
 import com.gjx.gpms.system.dto.UserCreateDTO;
 import com.gjx.gpms.system.dto.UserPageDTO;
 import com.gjx.gpms.system.dto.UserResetPasswordDTO;
@@ -43,7 +44,7 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
 
     private final PasswordEncoder passwordEncoder;
 
-    private final RedisUtil redisUtil;
+    private final RedisCacheService redisCacheService;
 
     private final UserRoleMapper userRoleMapper;
 
@@ -357,7 +358,15 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         this.updateById(user);
 
         // 清除Redis登录态，强制重新登录
-        try { redisUtil.delete("login:token:" + dto.getId()); } catch (Exception ignored) {}
+        try {
+            Object token = redisCacheService.get(CacheKeys.loginTokenByUserId(dto.getId()));
+            if (token != null) {
+                redisCacheService.delete(CacheKeys.loginToken(token.toString()));
+            }
+            redisCacheService.delete(CacheKeys.loginTokenByUserId(dto.getId()));
+            redisCacheService.delete(CacheKeys.permission(dto.getId()));
+            redisCacheService.delete(CacheKeys.userMenu(dto.getId()));
+        } catch (Exception ignored) {}
 
         log.info("重置密码成功，用户ID：{}", dto.getId());
     }
@@ -429,7 +438,15 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         }
 
         // 清除Redis登录态，强制重新登录以刷新权限
-        try { redisUtil.delete("login:token:" + dto.getUserId()); } catch (Exception ignored) {}
+        try {
+            Object token = redisCacheService.get(CacheKeys.loginTokenByUserId(dto.getUserId()));
+            if (token != null) {
+                redisCacheService.delete(CacheKeys.loginToken(token.toString()));
+            }
+            redisCacheService.delete(CacheKeys.loginTokenByUserId(dto.getUserId()));
+            redisCacheService.delete(CacheKeys.permission(dto.getUserId()));
+            redisCacheService.delete(CacheKeys.userMenu(dto.getUserId()));
+        } catch (Exception ignored) {}
 
         log.info("分配用户角色成功，用户ID：{}", dto.getUserId());
     }

@@ -1,21 +1,35 @@
 <template>
-  <div>
-    <h2>欢迎使用 GPMS 毕业设计全过程管理系统</h2>
-    <el-row :gutter="20" style="margin-top:20px">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>用户管理</template>
-          <p>管理系统用户、分配角色、重置密码</p>
-          <el-button type="primary" @click="$router.push('/system/user')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>角色管理</template>
-          <p>管理角色定义、分配权限</p>
-          <el-button type="primary" @click="$router.push('/system/role')">进入</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="dashboard">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">系统工作台</h1>
+        <p class="page-subtitle">当前账号可访问的核心管理入口</p>
+      </div>
+    </div>
+
+    <div class="action-grid">
+      <div class="action-card" @click="$router.push('/system/user')">
+        <div class="action-card__icon"><el-icon><User /></el-icon></div>
+        <h3 class="action-card__title">用户管理</h3>
+        <p class="action-card__meta">账号、角色、状态与密码维护</p>
+        <el-button type="primary" text>进入</el-button>
+      </div>
+      <div class="action-card" @click="$router.push('/system/role')">
+        <div class="action-card__icon"><el-icon><UserFilled /></el-icon></div>
+        <h3 class="action-card__title">角色管理</h3>
+        <p class="action-card__meta">角色定义与权限授权</p>
+        <el-button type="primary" text>进入</el-button>
+      </div>
+      <div class="action-card" @click="$router.push('/statistics')">
+        <div class="action-card__icon"><el-icon><DataAnalysis /></el-icon></div>
+        <h3 class="action-card__title">数据统计</h3>
+        <p class="action-card__meta">整体进度、选题和成绩概览</p>
+        <el-button type="primary" text>进入</el-button>
+      </div>
+    </div>
   </div>
 </template>
+
+<script setup>
+import { DataAnalysis, User, UserFilled } from '@element-plus/icons-vue'
+</script>

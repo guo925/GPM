@@ -43,6 +43,12 @@ public class LoginUser implements UserDetails, Serializable {
     private List<String> permissionCodes;
 
     /**
+     * 角色编码列表（用于角色兜底授权）
+     */
+    @JsonProperty("roles")
+    private List<String> roleCodes;
+
+    /**
      * 权限对象 —— 不序列化，从 permissionCodes 构建
      */
     @JsonIgnore
@@ -50,9 +56,18 @@ public class LoginUser implements UserDetails, Serializable {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (authorities == null && permissionCodes != null) {
-            authorities = permissionCodes.stream()
-                    .map(SimpleGrantedAuthority::new)
+        if (authorities == null) {
+            List<SimpleGrantedAuthority> permissionAuthorities = permissionCodes == null
+                    ? List.of()
+                    : permissionCodes.stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .collect(Collectors.toList());
+            List<SimpleGrantedAuthority> roleAuthorities = roleCodes == null
+                    ? List.of()
+                    : roleCodes.stream()
+                            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                            .collect(Collectors.toList());
+            authorities = java.util.stream.Stream.concat(permissionAuthorities.stream(), roleAuthorities.stream())
                     .collect(Collectors.toList());
         }
         return authorities;

@@ -32,6 +32,9 @@ public class GuidanceRecordVO {
     @Schema(description = "内容")
     private String content;
 
+    @Schema(description = "附件路径")
+    private String filePath;
+
     @Schema(description = "状态")
     private String status;
 

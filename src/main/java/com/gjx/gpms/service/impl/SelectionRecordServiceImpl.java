@@ -2,11 +2,17 @@ package com.gjx.gpms.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.common.exception.BusinessException;
 import com.gjx.gpms.dto.SelectionSubmitDTO;
 import com.gjx.gpms.dto.TeacherReviewDTO;
 import com.gjx.gpms.entity.*;
 import com.gjx.gpms.mapper.*;
+import com.gjx.gpms.mq.dto.SelectionSubmitMessage;
+import com.gjx.gpms.mq.producer.MqProducer;
+import com.gjx.gpms.mq.producer.NoticeProducer;
+import com.gjx.gpms.mq.producer.OperationLogProducer;
 import com.gjx.gpms.security.context.UserContext;
 import com.gjx.gpms.service.SelectionRecordService;
 import com.gjx.gpms.system.entity.User;
@@ -14,12 +20,19 @@ import com.gjx.gpms.system.mapper.UserMapper;
 import com.gjx.gpms.vo.SelectionRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -36,9 +49,14 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
     private final TopicMapper topicMapper;
     private final StudentTopicMapper studentTopicMapper;
     private final UserMapper userMapper;
+    private final RedisCacheService redisCacheService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final MqProducer mqProducer;
+    private final NoticeProducer noticeProducer;
+    private final OperationLogProducer operationLogProducer;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
-    @Transactional
     public void submitPreferences(SelectionSubmitDTO dto) {
         Long studentId = UserContext.getUserId();
         log.info("学生[{}]提交选题志愿，批次[{}]", studentId, dto.getBatchId());
@@ -64,25 +82,30 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
             throw new BusinessException("最多选择" + batch.getStudentMaxChoices() + "个志愿");
         }
 
-        // 保存志愿记录
-        for (int i = 0; i < dto.getTopicIds().size(); i++) {
-            Long topicId = dto.getTopicIds().get(i);
-
+        // 提交前校验课题有效性，避免无效消息进入 MQ。
+        for (Long topicId : dto.getTopicIds()) {
             Topic topic = topicMapper.selectById(topicId);
             if (topic == null || !"approved".equals(topic.getStatus())) {
                 throw new BusinessException("课题[" + topicId + "]不存在或未审核通过");
             }
-
-            SelectionRecord record = new SelectionRecord();
-            record.setBatchId(dto.getBatchId());
-            record.setStudentId(studentId);
-            record.setTopicId(topicId);
-            record.setPriority((byte) (i + 1));
-            record.setIsSelected((byte) 0);
-            this.save(record);
         }
 
-        log.info("学生[{}]提交选题志愿成功，共{}个志愿", studentId, dto.getTopicIds().size());
+        Long reservedTopicId = null;
+        if ("first_come".equals(batch.getSelectionMode())) {
+            reservedTopicId = dto.getTopicIds().get(0);
+            preDeductQuota(dto.getBatchId(), studentId, reservedTopicId);
+        }
+
+        SelectionSubmitMessage message = new SelectionSubmitMessage();
+        message.setMessageId(UUID.randomUUID().toString());
+        message.setBatchId(dto.getBatchId());
+        message.setStudentId(studentId);
+        message.setTopicIds(dto.getTopicIds());
+        message.setReservedTopicId(reservedTopicId);
+        message.setSubmittedAt(LocalDateTime.now());
+        mqProducer.sendSelection(message);
+
+        log.info("学生[{}]提交选题请求已进入异步队列，共{}个志愿", studentId, dto.getTopicIds().size());
     }
 
     @Override
@@ -144,10 +167,12 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         record.setTeacherComment(dto.getComment());
         record.setUpdatedAt(LocalDateTime.now());
         this.updateById(record);
+        syncSelectionCurrent(record);
 
         if ("approve".equals(dto.getAction())) {
             record.setIsSelected((byte) 1);
             this.updateById(record);
+            syncSelectionCurrent(record);
 
             // 检查该学生是否已有其他已通过的志愿，如果有则拒绝
             List<SelectionRecord> otherRecords = this.list(
@@ -162,6 +187,7 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
                 other.setTeacherComment("学生已被其他课题录取");
                 other.setUpdatedAt(LocalDateTime.now());
                 this.updateById(other);
+                syncSelectionCurrent(other);
             }
 
             // 创建 StudentTopic 记录
@@ -177,9 +203,14 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
             // 更新课题已选人数
             topic.setCurrentCount((topic.getCurrentCount() == null ? 0 : topic.getCurrentCount()) + 1);
             topicMapper.updateById(topic);
+            syncTopicCurrent(topic);
+            noticeProducer.send(record.getStudentId(), "选题审核通过", "你的选题志愿已通过审核", "selection");
+            operationLogProducer.send(UserContext.getUserId(), "AUDIT", "selection_record", String.valueOf(record.getId()), "教师通过选题志愿");
 
             log.info("教师[{}]通过学生[{}]的志愿，课题[{}]", UserContext.getUserId(), record.getStudentId(), record.getTopicId());
         } else {
+            noticeProducer.send(record.getStudentId(), "选题审核未通过", "你的选题志愿未通过审核", "selection");
+            operationLogProducer.send(UserContext.getUserId(), "AUDIT", "selection_record", String.valueOf(record.getId()), "教师拒绝选题志愿");
             log.info("教师[{}]拒绝学生[{}]的志愿", UserContext.getUserId(), record.getStudentId());
         }
     }
@@ -230,6 +261,7 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
                 pref.setIsSelected((byte) 1);
                 pref.setUpdatedAt(LocalDateTime.now());
                 this.updateById(pref);
+                syncSelectionCurrent(pref);
 
                 StudentTopic st = new StudentTopic();
                 st.setBatchId(batchId);
@@ -242,6 +274,8 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
 
                 topic.setCurrentCount((topic.getCurrentCount() == null ? 0 : topic.getCurrentCount()) + 1);
                 topicMapper.updateById(topic);
+                syncTopicCurrent(topic);
+                noticeProducer.send(studentId, "选题分配成功", "系统已为你分配课题", "selection");
 
                 allocated = true;
                 break;
@@ -253,6 +287,34 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         }
 
         log.info("系统自动分配完成，批次[{}]", batchId);
+    }
+
+    private void preDeductQuota(Long batchId, Long studentId, Long topicId) {
+        Topic topic = topicMapper.selectById(topicId);
+        int remain = Math.max(0, (topic.getMaxCapacity() == null ? 0 : topic.getMaxCapacity())
+                - (topic.getCurrentCount() == null ? 0 : topic.getCurrentCount()));
+        String quotaKey = CacheKeys.selectionQuota(topicId);
+        if (stringRedisTemplate.opsForValue().get(quotaKey) == null) {
+            stringRedisTemplate.opsForValue().set(quotaKey, String.valueOf(remain), Duration.ofHours(2));
+        }
+
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setLocation(new ClassPathResource("lua/selection_quota_decrement.lua"));
+        script.setResultType(Long.class);
+        Long result = stringRedisTemplate.execute(
+                script,
+                Arrays.asList(quotaKey, CacheKeys.selectionStudent(batchId, studentId)),
+                String.valueOf(Duration.ofHours(2).toSeconds())
+        );
+        if (result == null || result == -1L) {
+            throw new BusinessException("课题名额未初始化，请稍后重试");
+        }
+        if (result == -2L) {
+            throw new BusinessException("已提交过志愿，请勿重复提交");
+        }
+        if (result == 0L) {
+            throw new BusinessException("课题名额已满");
+        }
     }
 
     private List<SelectionRecordVO> toVOList(List<SelectionRecord> records) {
@@ -281,5 +343,40 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
             vo.setCreatedAt(r.getCreatedAt());
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    private void syncSelectionCurrent(SelectionRecord record) {
+        try {
+            jdbcTemplate.update("""
+                    REPLACE INTO selection_current
+                    (id,batch_id,student_id,topic_id,priority,teacher_action,teacher_comment,is_selected,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    record.getId(),
+                    record.getBatchId(),
+                    record.getStudentId(),
+                    record.getTopicId(),
+                    record.getPriority(),
+                    record.getTeacherAction(),
+                    record.getTeacherComment(),
+                    record.getIsSelected(),
+                    record.getCreatedAt(),
+                    record.getUpdatedAt()
+            );
+        } catch (Exception e) {
+            log.debug("selection_current 未就绪，跳过选题热表同步：{}", e.getMessage());
+        }
+    }
+
+    private void syncTopicCurrent(Topic topic) {
+        try {
+            jdbcTemplate.update("UPDATE topic_current SET current_count=?, updated_at=? WHERE id=?",
+                    topic.getCurrentCount(),
+                    topic.getUpdatedAt(),
+                    topic.getId()
+            );
+        } catch (Exception e) {
+            log.debug("topic_current 未就绪，跳过课题人数同步：{}", e.getMessage());
+        }
     }
 }

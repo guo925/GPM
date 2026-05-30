@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface ScoreService extends IService<ScoreSheet> {
 
-    void calculate(ScoreSheetDTO dto);
+    ScoreSheetVO calculate(ScoreSheetDTO dto);
 
     void submit(Long id);
 

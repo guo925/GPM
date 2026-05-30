@@ -2,7 +2,8 @@ package com.gjx.gpms.security.filter;
 
 import com.gjx.gpms.security.model.LoginUser;
 import com.gjx.gpms.security.util.JwtUtil;
-import com.gjx.gpms.common.utils.RedisUtil;
+import com.gjx.gpms.cache.CacheKeys;
+import com.gjx.gpms.cache.RedisCacheService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,7 +27,7 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final RedisUtil redisUtil;
+    private final RedisCacheService redisCacheService;
 
     @Override
     protected void doFilterInternal(
@@ -50,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // 优先从Redis获取
             try {
-                loginUser = (LoginUser) redisUtil.get("login:token:" + userId);
+                loginUser = redisCacheService.get(CacheKeys.loginToken(token), LoginUser.class);
             } catch (Exception e) {
                 log.debug("Redis读取失败，降级JWT：{}", e.getMessage());
             }
@@ -58,6 +59,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Redis不可用时从JWT构建
             if (loginUser == null) {
                 loginUser = jwtUtil.buildLoginUserFromToken(token);
+            } else if (loginUser.getRoleCodes() == null || loginUser.getRoleCodes().isEmpty()) {
+                loginUser.setRoleCodes(jwtUtil.buildLoginUserFromToken(token).getRoleCodes());
             }
 
             UsernamePasswordAuthenticationToken authentication =

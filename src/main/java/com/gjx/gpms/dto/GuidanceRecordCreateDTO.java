@@ -25,4 +25,7 @@ public class GuidanceRecordCreateDTO {
     @NotBlank(message = "内容不能为空")
     @Schema(description = "周记内容")
     private String content;
+
+    @Schema(description = "附件路径")
+    private String filePath;
 }

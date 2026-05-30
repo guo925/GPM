@@ -1,37 +1,40 @@
 <template>
-  <div class="page">
-    <h3>数据统计</h3>
+  <div class="workspace-page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">数据统计</h1>
+        <p class="page-subtitle">系统运行、选题进度、流程节点与成绩分布</p>
+      </div>
+    </div>
 
     <!-- 概览卡片 -->
-    <el-row :gutter="16" style="margin-bottom:16px">
-      <el-col :span="4" v-for="c in overviewCards" :key="c.label">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-num">{{ c.value }}</div>
-          <div class="stat-label">{{ c.label }}</div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="metric-grid">
+      <div class="metric-card" v-for="c in overviewCards" :key="c.label">
+        <div class="metric-card__value">{{ c.value }}</div>
+        <div class="metric-card__label">{{ c.label }}</div>
+      </div>
+    </div>
 
     <!-- 选题统计 -->
-    <el-row :gutter="16" style="margin-bottom:16px" v-if="data">
+    <el-row :gutter="16" class="stats-row" v-if="data">
       <el-col :span="12">
-        <el-card header="课题与选题">
-          <div style="display:flex;justify-content:space-around;padding:20px 0">
-            <div style="text-align:center">
-              <div style="font-size:36px;color:#409EFF;font-weight:bold">{{ data.totalTopics }}</div>
-              <div style="color:#909399;margin-top:4px">课题总数</div>
+        <el-card header="课题与选题" class="work-card">
+          <div class="summary-strip">
+            <div>
+              <strong>{{ data.totalTopics }}</strong>
+              <span>课题总数</span>
             </div>
-            <div style="text-align:center">
-              <div style="font-size:36px;color:#67C23A;font-weight:bold">{{ data.approvedTopics }}</div>
-              <div style="color:#909399;margin-top:4px">已通过</div>
+            <div>
+              <strong class="success">{{ data.approvedTopics }}</strong>
+              <span>已通过</span>
             </div>
-            <div style="text-align:center">
-              <div style="font-size:36px;color:#E6A23C;font-weight:bold">{{ data.selectedStudents }}</div>
-              <div style="color:#909399;margin-top:4px">已选题</div>
+            <div>
+              <strong class="warning">{{ data.selectedStudents }}</strong>
+              <span>已选题</span>
             </div>
-            <div style="text-align:center">
-              <div style="font-size:36px;color:#F56C6C;font-weight:bold">{{ data.unselectedStudents }}</div>
-              <div style="color:#909399;margin-top:4px">未选题</div>
+            <div>
+              <strong class="danger">{{ data.unselectedStudents }}</strong>
+              <span>未选题</span>
             </div>
           </div>
         </el-card>
@@ -39,12 +42,12 @@
 
       <!-- 成绩分布 -->
       <el-col :span="12">
-        <el-card header="成绩分布" v-if="data.scoreDistribution">
-          <div style="display:flex;justify-content:space-around;align-items:flex-end;height:180px;padding:10px 0">
-            <div v-for="g in data.scoreDistribution" :key="g.grade" style="text-align:center">
-              <div style="font-size:24px;font-weight:bold" :style="{ color: gradeColor(g.grade) }">{{ g.count }}</div>
+        <el-card header="成绩分布" v-if="data.scoreDistribution" class="work-card">
+          <div class="score-bars">
+            <div v-for="g in data.scoreDistribution" :key="g.grade" class="score-item">
+              <div class="score-count" :style="{ color: gradeColor(g.grade) }">{{ g.count }}</div>
               <div :style="barStyle(g.count, maxScoreCount)" class="bar"></div>
-              <div style="color:#909399;margin-top:4px">{{ g.grade }}</div>
+              <div class="score-label">{{ g.grade }}</div>
             </div>
           </div>
         </el-card>
@@ -52,8 +55,8 @@
     </el-row>
 
     <!-- 阶段进度 -->
-    <el-card header="各阶段完成情况" v-if="data && data.stageStats">
-      <el-table :data="data.stageStats" border stripe>
+    <el-card header="各阶段完成情况" v-if="data && data.stageStats" class="table-card">
+      <el-table :data="data.stageStats" stripe>
         <el-table-column prop="label" label="阶段" width="120" />
         <el-table-column prop="submitted" label="已提交" width="100" />
         <el-table-column prop="approved" label="已通过" width="100" />
@@ -123,9 +126,71 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page h3 { margin-bottom: 20px; color: #303133; }
-.stat-card { text-align: center; padding: 10px 0; }
-.stat-num { font-size: 32px; font-weight: bold; color: #409EFF; }
-.stat-label { color: #909399; margin-top: 6px; font-size: 14px; }
-.bar { transition: height 0.5s; }
+.stats-row {
+  margin-bottom: 16px;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.summary-strip div {
+  padding: 16px;
+  text-align: center;
+  background: var(--gp-surface-soft);
+  border: 1px solid var(--gp-border);
+  border-radius: 8px;
+}
+
+.summary-strip strong,
+.summary-strip span {
+  display: block;
+}
+
+.summary-strip strong {
+  color: var(--gp-primary);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.summary-strip span {
+  margin-top: 9px;
+  color: var(--gp-text-muted);
+  font-size: 13px;
+}
+
+.summary-strip .success { color: var(--gp-success); }
+.summary-strip .warning { color: var(--gp-warning); }
+.summary-strip .danger { color: var(--gp-danger); }
+
+.score-bars {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 184px;
+  padding: 10px 0;
+}
+
+.score-item {
+  min-width: 52px;
+  text-align: center;
+}
+
+.score-count {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.score-label {
+  margin-top: 6px;
+  color: var(--gp-text-muted);
+  font-size: 13px;
+}
+
+.bar {
+  transition: height 0.5s;
+}
 </style>

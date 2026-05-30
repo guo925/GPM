@@ -18,6 +18,8 @@ public interface BatchService extends IService<Batch> {
 
     BatchVO getDetail(Long id);
 
+    BatchVO getCurrentBatch();
+
     void create(BatchCreateDTO dto);
 
     void update(BatchUpdateDTO dto);

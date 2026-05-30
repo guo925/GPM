@@ -16,6 +16,12 @@
       <el-table v-if="records.length > 0" :data="records" border stripe>
         <el-table-column prop="weekNumber" label="周次" width="80" />
         <el-table-column prop="content" label="内容" min-width="200" show-overflow-tooltip />
+        <el-table-column label="附件" width="110">
+          <template #default="{ row }">
+            <el-link v-if="row.filePath" type="primary" :href="getFileViewUrl(row.filePath)" target="_blank">查看</el-link>
+            <span v-else style="color:#909399">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'reviewed' ? 'success' : 'info'">
@@ -39,10 +45,26 @@
         <el-form-item label="内容">
           <el-input v-model="dialog.form.content" type="textarea" :rows="5" placeholder="请输入本周工作内容" />
         </el-form-item>
+        <el-form-item label="附件">
+          <el-upload
+            class="upload-block"
+            :show-file-list="false"
+            :http-request="uploadGuidanceFile"
+            :before-upload="beforeUpload"
+          >
+            <el-button :loading="dialog.uploading">
+              <el-icon><Upload /></el-icon>
+              选择文件
+            </el-button>
+          </el-upload>
+          <el-link v-if="dialog.fileName" class="file-link" type="primary" :href="getFileViewUrl(dialog.form.filePath)" target="_blank">
+            {{ dialog.fileName }}
+          </el-link>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialog.visible = false">取消</el-button>
-        <el-button type="primary" :loading="dialog.loading" @click="handleCreate">提交</el-button>
+        <el-button type="primary" :loading="dialog.loading" :disabled="dialog.uploading" @click="handleCreate">提交</el-button>
       </template>
     </el-dialog>
   </div>
@@ -51,8 +73,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Upload } from '@element-plus/icons-vue'
 import { getMyTopic } from '@/api/studentTopic'
 import { getGuidanceList, createGuidance } from '@/api/guidance'
+import { uploadFile, getFileViewUrl } from '@/api/file'
 
 const myTopic = ref(null)
 const loading = ref(true)
@@ -63,7 +87,9 @@ const studentTopicId = computed(() => myTopic.value?.id)
 const dialog = reactive({
   visible: false,
   loading: false,
-  form: { studentTopicId: null, weekNumber: 1, content: '' }
+  uploading: false,
+  fileName: '',
+  form: { studentTopicId: null, weekNumber: 1, content: '', filePath: '' }
 })
 
 const fetchData = async () => {
@@ -80,11 +106,42 @@ const fetchData = async () => {
 }
 
 const openCreate = () => {
-  dialog.form = { studentTopicId: studentTopicId.value, weekNumber: 1, content: '' }
+  dialog.fileName = ''
+  dialog.form = { studentTopicId: studentTopicId.value, weekNumber: 1, content: '', filePath: '' }
   dialog.visible = true
 }
 
+const beforeUpload = (file) => {
+  const allowed = ['pdf', 'doc', 'docx', 'wps', 'xls', 'xlsx', 'et', 'ppt', 'pptx', 'dps', 'txt', 'zip', 'rar', 'png', 'jpg', 'jpeg']
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!allowed.includes(ext)) {
+    ElMessage.warning('不支持的文件类型')
+    return false
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    ElMessage.warning('文件大小不能超过50MB')
+    return false
+  }
+  return true
+}
+
+const uploadGuidanceFile = async ({ file }) => {
+  dialog.uploading = true
+  try {
+    const res = await uploadFile(file, 'guidance')
+    dialog.form.filePath = res.data.url
+    dialog.fileName = res.data.originalName
+    ElMessage.success('附件上传成功')
+  } finally {
+    dialog.uploading = false
+  }
+}
+
 const handleCreate = async () => {
+  if (dialog.uploading) {
+    ElMessage.warning('附件正在上传，请稍后提交')
+    return
+  }
   if (!dialog.form.content.trim()) {
     ElMessage.warning('请输入内容')
     return
@@ -107,4 +164,6 @@ onMounted(fetchData)
 
 <style scoped>
 .page h3 { margin-bottom: 20px; color: #303133; }
+.upload-block { margin-right: 10px; }
+.file-link { margin-left: 12px; vertical-align: middle; }
 </style>

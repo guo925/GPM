@@ -55,6 +55,12 @@ public class SecurityConfig {
                         // 登录放行
                         .requestMatchers("/api/auth/login").permitAll()
 
+                        // 文件查看放行
+                        .requestMatchers("/api/file/view").permitAll()
+
+                        // 本地上传文件查看放行
+                        .requestMatchers("/uploads/**").permitAll()
+
                         // Knife4j放行
                         .requestMatchers(
                                 "/doc.html",

@@ -59,9 +59,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new BusinessException("账号已被禁用");
         }
 
-        // 查询权限
-        List<String> perms =
-                permissionMapper.selectPermsByUserId(user.getId());
+        // 登录时直接读取最新权限，避免角色授权调整后继续使用旧缓存。
+        List<String> perms = permissionMapper.selectPermsByUserId(user.getId());
 
         // 封装权限
         List<SimpleGrantedAuthority> authorities =

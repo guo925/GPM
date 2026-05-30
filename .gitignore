@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### GPMS local uploads and secrets ###
+uploads/
+application-local.yml

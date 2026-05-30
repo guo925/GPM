@@ -1,51 +1,34 @@
 <template>
   <div class="dashboard">
-    <h3>专业管理员工作台</h3>
-    <el-row :gutter="20">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>批次管理</template>
-          <p>查看和管理本专业毕业设计批次</p>
-          <el-button type="primary" @click="$router.push('/batch')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>课题管理</template>
-          <p>审核本专业教师申报的课题，管理课题库</p>
-          <el-button type="primary" @click="$router.push('/topic')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>教师分配</template>
-          <p>查看本专业指导教师和学生匹配情况</p>
-          <el-button type="primary" @click="$router.push('/major/monitor')">进入</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
-    <el-row :gutter="20" style="margin-top:20px">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>选题进度</template>
-          <p>查看本专业学生选题状态和志愿分布</p>
-          <el-button type="primary" @click="$router.push('/major/monitor')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>流程管理</template>
-          <p>跟踪本专业毕业设计各阶段完成情况</p>
-          <el-button type="primary" @click="$router.push('/major/monitor')">进入</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>成绩统计</template>
-          <p>查看本专业毕业设计成绩分布</p>
-          <el-button type="primary" @click="$router.push('/major/monitor')">进入</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">专业管理员工作台</h1>
+        <p class="page-subtitle">聚焦本专业的课题、选题、流程和教师负载</p>
+      </div>
+    </div>
+
+    <div class="action-grid">
+      <div v-for="item in actions" :key="item.path + item.title" class="action-card">
+        <div class="action-card__icon"><el-icon><component :is="item.icon" /></el-icon></div>
+        <h2 class="action-card__title">{{ item.title }}</h2>
+        <p class="action-card__meta">{{ item.desc }}</p>
+        <el-button type="primary" @click="router.push(item.path)">进入</el-button>
+      </div>
+    </div>
   </div>
 </template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+import { Tickets, Collection, Monitor, UserFilled, Finished, DataLine } from '@element-plus/icons-vue'
+
+const router = useRouter()
+const actions = [
+  { title: '批次管理', desc: '查看和维护本专业毕业设计批次。', path: '/batch', icon: Tickets },
+  { title: '课题管理', desc: '审核本专业课题并查看容量使用情况。', path: '/topic', icon: Collection },
+  { title: '专业监控', desc: '查看教师负载、选题分配和流程异常。', path: '/major/monitor', icon: Monitor },
+  { title: '选题进度', desc: '跟踪本专业学生志愿和导师匹配情况。', path: '/major/monitor', icon: UserFilled },
+  { title: '流程管理', desc: '定位任务书、开题、中期和论文阶段待处理事项。', path: '/major/monitor', icon: Finished },
+  { title: '成绩统计', desc: '查看本专业毕业设计成绩分布和完成度。', path: '/major/monitor', icon: DataLine }
+]
+</script>

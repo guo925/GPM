@@ -32,7 +32,7 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
     private final UserMapper userMapper;
 
     @Override
-    public void calculate(ScoreSheetDTO dto) {
+    public ScoreSheetVO calculate(ScoreSheetDTO dto) {
         log.info("计算成绩，学生选题[{}]", dto.getStudentTopicId());
 
         ScoreSheet sheet = this.getOne(
@@ -49,11 +49,11 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
 
         // 计算加权总分
         BigDecimal advisorWeight = dto.getAdvisorWeight() != null ?
-                new BigDecimal(dto.getAdvisorWeight()) : new BigDecimal("0.3");
+                dto.getAdvisorWeight() : new BigDecimal("0.3");
         BigDecimal reviewerWeight = dto.getReviewerWeight() != null ?
-                new BigDecimal(dto.getReviewerWeight()) : new BigDecimal("0.3");
+                dto.getReviewerWeight() : new BigDecimal("0.3");
         BigDecimal defenseWeight = dto.getDefenseWeight() != null ?
-                new BigDecimal(dto.getDefenseWeight()) : new BigDecimal("0.4");
+                dto.getDefenseWeight() : new BigDecimal("0.4");
 
         BigDecimal finalScore = BigDecimal.ZERO;
 
@@ -95,6 +95,7 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
         }
 
         log.info("成绩计算完成，总分：{}，等级：{}", sheet.getFinalScore(), sheet.getGradeLevel());
+        return getDetail(dto.getStudentTopicId());
     }
 
     private void saveDetail(Long sheetId, String type, BigDecimal score, BigDecimal weight) {

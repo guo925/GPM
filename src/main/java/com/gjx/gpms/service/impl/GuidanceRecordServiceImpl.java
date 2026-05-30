@@ -52,6 +52,7 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
         record.setStudentTopicId(dto.getStudentTopicId());
         record.setWeekNumber(dto.getWeekNumber());
         record.setContent(dto.getContent());
+        record.setFilePath(dto.getFilePath());
         record.setStatus("submitted");
 
         this.save(record);
@@ -108,6 +109,7 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
             vo.setTopicTitle(finalTopicTitle);
             vo.setWeekNumber(r.getWeekNumber());
             vo.setContent(r.getContent());
+            vo.setFilePath(r.getFilePath());
             vo.setStatus(r.getStatus());
             vo.setAdvisorComment(r.getAdvisorComment());
             vo.setReviewedAt(r.getReviewedAt());
