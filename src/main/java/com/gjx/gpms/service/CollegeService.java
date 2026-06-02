@@ -14,11 +14,23 @@ import java.util.List;
  */
 public interface CollegeService extends IService<College> {
 
+    /**
+     * 查询列表all相关逻辑。
+     */
     List<CollegeVO> listAll();
 
+    /**
+     * 创建相关逻辑。
+     */
     void create(CollegeCreateDTO dto);
 
+    /**
+     * 更新相关逻辑。
+     */
     void update(Long id, CollegeCreateDTO dto);
 
+    /**
+     * 删除by id相关逻辑。
+     */
     void deleteById(Long id);
 }

@@ -34,6 +34,9 @@ public class SelectionConsumer {
     private final OperationLogProducer operationLogProducer;
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * 消费相关逻辑。
+     */
     @RabbitListener(queues = RabbitMQConfig.SELECTION_QUEUE)
     @Transactional(rollbackFor = Exception.class)
     public void consume(SelectionSubmitMessage message) {
@@ -88,6 +91,9 @@ public class SelectionConsumer {
         }
     }
 
+    /**
+     * 处理rollbackQuota相关逻辑。
+     */
     private void rollbackQuota(SelectionSubmitMessage message) {
         if (message.getReservedTopicId() != null) {
             redisCacheService.increment(CacheKeys.selectionQuota(message.getReservedTopicId()));
@@ -95,6 +101,9 @@ public class SelectionConsumer {
         }
     }
 
+    /**
+     * 同步selection current相关逻辑。
+     */
     private void syncSelectionCurrent(SelectionRecord record) {
         try {
             jdbcTemplate.update("""

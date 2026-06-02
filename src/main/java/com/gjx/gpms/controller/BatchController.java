@@ -37,6 +37,9 @@ public class BatchController {
         return Result.success(batchService.page(current, size, name, status));
     }
 
+    /**
+     * 批次详情
+     */
     @Operation(summary = "批次详情")
     @PreAuthorize("hasAuthority('batch:query')")
     @GetMapping("/{id}")
@@ -44,6 +47,9 @@ public class BatchController {
         return Result.success(batchService.getDetail(id));
     }
 
+    /**
+     * 当前批次
+     */
     @Operation(summary = "当前批次")
     @PreAuthorize("hasAuthority('batch:query')")
     @GetMapping("/current")
@@ -51,6 +57,9 @@ public class BatchController {
         return Result.success(batchService.getCurrentBatch());
     }
 
+    /**
+     * 新增批次
+     */
     @Operation(summary = "新增批次")
     @PreAuthorize("hasAuthority('batch:add')")
     @PostMapping("/create")
@@ -59,6 +68,9 @@ public class BatchController {
         return Result.success();
     }
 
+    /**
+     * 修改批次
+     */
     @Operation(summary = "修改批次")
     @PreAuthorize("hasAuthority('batch:update')")
     @PutMapping("/update")
@@ -67,6 +79,9 @@ public class BatchController {
         return Result.success();
     }
 
+    /**
+     * 删除批次
+     */
     @Operation(summary = "删除批次")
     @PreAuthorize("hasAuthority('batch:delete')")
     @DeleteMapping("/{id}")
@@ -75,6 +90,9 @@ public class BatchController {
         return Result.success();
     }
 
+    /**
+     * 推进阶段
+     */
     @Operation(summary = "推进阶段")
     @PreAuthorize("hasAuthority('batch:stage')")
     @PutMapping("/{id}/stage")

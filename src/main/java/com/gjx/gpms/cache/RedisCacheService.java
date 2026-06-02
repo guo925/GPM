@@ -24,10 +24,16 @@ public class RedisCacheService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 查询相关逻辑。
+     */
     public Object get(String key) {
         return redisTemplate.opsForValue().get(key);
     }
 
+    /**
+     * 查询相关逻辑。
+     */
     @SuppressWarnings("unchecked")
     public <T> T get(String key, Class<T> type) {
         Object value = get(key);
@@ -37,43 +43,73 @@ public class RedisCacheService {
         return (T) value;
     }
 
+    /**
+     * 处理set相关逻辑。
+     */
     public void set(String key, Object value, Duration ttl) {
         redisTemplate.opsForValue().set(key, value, ttl);
     }
 
+    /**
+     * 删除相关逻辑。
+     */
     public Boolean delete(String key) {
         return redisTemplate.delete(key);
     }
 
+    /**
+     * 处理expire相关逻辑。
+     */
     public Boolean expire(String key, Duration ttl) {
         return redisTemplate.expire(key, ttl);
     }
 
+    /**
+     * 处理increment相关逻辑。
+     */
     public Long increment(String key) {
         return redisTemplate.opsForValue().increment(key);
     }
 
+    /**
+     * 设置WithRandomTtl。
+     */
     public void setWithRandomTtl(String key, Object value, Duration baseTtl, int randomSeconds) {
         int jitter = randomSeconds <= 0 ? 0 : ThreadLocalRandom.current().nextInt(randomSeconds + 1);
         set(key, value, baseTtl.plusSeconds(jitter));
     }
 
+    /**
+     * 处理cacheNullValue相关逻辑。
+     */
     public void cacheNullValue(String key, Duration ttl) {
         set(key, NULL_VALUE, ttl);
     }
 
+    /**
+     * 处理tryLock相关逻辑。
+     */
     public Boolean tryLock(String key, Duration ttl) {
         return redisTemplate.opsForValue().setIfAbsent(key, "1", ttl);
     }
 
+    /**
+     * 设置IfAbsent。
+     */
     public Boolean setIfAbsent(String key, Object value, Duration ttl) {
         return redisTemplate.opsForValue().setIfAbsent(key, value, ttl);
     }
 
+    /**
+     * 处理isNullValue相关逻辑。
+     */
     public boolean isNullValue(Object value) {
         return NULL_VALUE.equals(value);
     }
 
+    /**
+     * 获取OrLoad。
+     */
     public <T> T getOrLoad(String key, Class<T> type, Duration ttl, int randomSeconds, Supplier<T> loader) {
         Object cached = get(key);
         if (cached != null) {

@@ -24,6 +24,9 @@ public class OperationLogConsumer {
     private final OperationLogMapper operationLogMapper;
     private final RedisCacheService redisCacheService;
 
+    /**
+     * 消费相关逻辑。
+     */
     @RabbitListener(queues = RabbitMQConfig.LOG_QUEUE)
     public void consume(OperationLogMessage message) {
         String idempotentKey = "mq:log:done:" + message.getMessageId();

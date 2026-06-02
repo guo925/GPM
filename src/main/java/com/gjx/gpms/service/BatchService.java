@@ -14,17 +14,38 @@ import com.gjx.gpms.vo.BatchVO;
  */
 public interface BatchService extends IService<Batch> {
 
+    /**
+     * 分页查询相关逻辑。
+     */
     IPage<BatchVO> page(long current, long size, String name, Integer status);
 
+    /**
+     * 获取Detail。
+     */
     BatchVO getDetail(Long id);
 
+    /**
+     * 获取CurrentBatch。
+     */
     BatchVO getCurrentBatch();
 
+    /**
+     * 创建相关逻辑。
+     */
     void create(BatchCreateDTO dto);
 
+    /**
+     * 更新相关逻辑。
+     */
     void update(BatchUpdateDTO dto);
 
+    /**
+     * 删除by id相关逻辑。
+     */
     void deleteById(Long id);
 
+    /**
+     * 处理advanceStage相关逻辑。
+     */
     void advanceStage(Long id, String nextStage);
 }

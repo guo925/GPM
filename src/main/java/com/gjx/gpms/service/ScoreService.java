@@ -13,13 +13,28 @@ import java.util.List;
  */
 public interface ScoreService extends IService<ScoreSheet> {
 
+    /**
+     * 计算相关逻辑。
+     */
     ScoreSheetVO calculate(ScoreSheetDTO dto);
 
+    /**
+     * 提交相关逻辑。
+     */
     void submit(Long id);
 
+    /**
+     * 审核相关逻辑。
+     */
     void review(Long id, String status, String comment);
 
+    /**
+     * 获取Detail。
+     */
     ScoreSheetVO getDetail(Long studentTopicId);
 
+    /**
+     * 查询列表by batch相关逻辑。
+     */
     List<ScoreSheetVO> listByBatch(Long batchId);
 }

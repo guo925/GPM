@@ -5,6 +5,9 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * PlagiarismCheck 视图对象。
+ */
 @Data
 @Schema(description = "AI查重结果")
 public class PlagiarismCheckVO {
@@ -33,6 +36,9 @@ public class PlagiarismCheckVO {
     @Schema(description = "疑似重复片段")
     private List<String> suspiciousSegments;
 
+    /**
+     * MatchSource 类。
+     */
     @Data
     @Schema(description = "相似来源")
     public static class MatchSource {

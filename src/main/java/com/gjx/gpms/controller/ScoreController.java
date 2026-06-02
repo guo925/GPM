@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Score 控制器。
+ */
 @Tag(name = "成绩管理")
 @RestController
 @RequestMapping("/api/score")
@@ -22,6 +25,9 @@ public class ScoreController {
 
     private final ScoreService scoreService;
 
+    /**
+     * 计算/更新成绩
+     */
     @Operation(summary = "计算/更新成绩")
     @PreAuthorize("hasAuthority('score:calculate')")
     @PostMapping("/calculate")
@@ -29,6 +35,9 @@ public class ScoreController {
         return Result.success(scoreService.calculate(dto));
     }
 
+    /**
+     * 提交成绩
+     */
     @Operation(summary = "提交成绩")
     @PreAuthorize("hasAuthority('score:submit')")
     @PutMapping("/submit/{id}")
@@ -37,6 +46,9 @@ public class ScoreController {
         return Result.success();
     }
 
+    /**
+     * 审核成绩
+     */
     @Operation(summary = "审核成绩")
     @PreAuthorize("hasAuthority('score:review')")
     @PutMapping("/review/{id}")
@@ -45,12 +57,18 @@ public class ScoreController {
         return Result.success();
     }
 
+    /**
+     * 成绩详情
+     */
     @Operation(summary = "成绩详情")
     @GetMapping("/detail/{studentTopicId}")
     public Result<ScoreSheetVO> getDetail(@PathVariable Long studentTopicId) {
         return Result.success(scoreService.getDetail(studentTopicId));
     }
 
+    /**
+     * 批次成绩列表
+     */
     @Operation(summary = "批次成绩列表")
     @GetMapping("/batch/{batchId}")
     public Result<List<ScoreSheetVO>> listByBatch(@PathVariable Long batchId) {

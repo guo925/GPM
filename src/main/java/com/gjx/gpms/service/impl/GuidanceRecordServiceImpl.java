@@ -38,6 +38,9 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     public void create(GuidanceRecordCreateDTO dto) {
         Long userId = UserContext.getUserId();
@@ -59,6 +62,9 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
         log.info("指导记录提交成功");
     }
 
+    /**
+     * 审核相关逻辑。
+     */
     @Override
     public void review(Long id, String comment) {
         log.info("审核指导记录[{}]", id);
@@ -76,6 +82,9 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
         log.info("指导记录审核完成");
     }
 
+    /**
+     * 获取ByStudentTopic。
+     */
     @Override
     public List<GuidanceRecordVO> getByStudentTopic(Long studentTopicId) {
         List<GuidanceRecord> records = this.list(

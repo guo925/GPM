@@ -39,6 +39,9 @@ public class TopicController {
         return Result.success(topicService.page(current, size, batchId, status));
     }
 
+    /**
+     * 热门课题列表
+     */
     @Operation(summary = "热门课题列表")
     @PreAuthorize("hasAuthority('topic:page')")
     @GetMapping("/hot")
@@ -46,6 +49,9 @@ public class TopicController {
         return Result.success(topicService.getHotTopics());
     }
 
+    /**
+     * 课题详情
+     */
     @Operation(summary = "课题详情")
     @PreAuthorize("hasAuthority('topic:page')")
     @GetMapping("/{id}")
@@ -53,6 +59,9 @@ public class TopicController {
         return Result.success(topicService.getDetail(id));
     }
 
+    /**
+     * 新增课题
+     */
     @Operation(summary = "新增课题")
     @PreAuthorize("hasAuthority('topic:add')")
     @PostMapping("/create")
@@ -61,6 +70,9 @@ public class TopicController {
         return Result.success();
     }
 
+    /**
+     * 修改课题
+     */
     @Operation(summary = "修改课题")
     @PreAuthorize("hasAuthority('topic:update')")
     @PutMapping("/update/{id}")
@@ -69,6 +81,9 @@ public class TopicController {
         return Result.success();
     }
 
+    /**
+     * 删除课题
+     */
     @Operation(summary = "删除课题")
     @PreAuthorize("hasAuthority('topic:delete')")
     @DeleteMapping("/{id}")
@@ -77,6 +92,9 @@ public class TopicController {
         return Result.success();
     }
 
+    /**
+     * 审核课题
+     */
     @Operation(summary = "审核课题")
     @PreAuthorize("hasAuthority('topic:review')")
     @PutMapping("/review")

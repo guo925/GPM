@@ -15,13 +15,28 @@ import java.util.List;
  */
 public interface SelectionRecordService extends IService<SelectionRecord> {
 
+    /**
+     * 提交preferences相关逻辑。
+     */
     void submitPreferences(SelectionSubmitDTO dto);
 
+    /**
+     * 获取MySelections。
+     */
     List<SelectionRecordVO> getMySelections(Long batchId);
 
+    /**
+     * 获取TeacherReviewList。
+     */
     List<SelectionRecordVO> getTeacherReviewList(Long batchId);
 
+    /**
+     * 处理teacherReview相关逻辑。
+     */
     void teacherReview(TeacherReviewDTO dto);
 
+    /**
+     * 处理autoAllocate相关逻辑。
+     */
     void autoAllocate(Long batchId);
 }

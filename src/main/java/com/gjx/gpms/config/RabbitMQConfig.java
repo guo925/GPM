@@ -39,11 +39,17 @@ public class RabbitMQConfig {
     public static final String DEAD_LETTER_QUEUE = "dead.letter.queue";
     public static final String DEAD_LETTER_ROUTING_KEY = "dead.letter.routing.key";
 
+    /**
+     * 处理messageConverter相关逻辑。
+     */
     @Bean
     public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 
+    /**
+     * 处理rabbitTemplate相关逻辑。
+     */
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
@@ -51,6 +57,9 @@ public class RabbitMQConfig {
         return template;
     }
 
+    /**
+     * 处理rabbitListenerContainerFactory相关逻辑。
+     */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
@@ -65,66 +74,105 @@ public class RabbitMQConfig {
         return factory;
     }
 
+    /**
+     * 查询exchange相关逻辑。
+     */
     @Bean
     public DirectExchange selectionExchange() {
         return new DirectExchange(SELECTION_EXCHANGE, true, false);
     }
 
+    /**
+     * 处理noticeExchange相关逻辑。
+     */
     @Bean
     public DirectExchange noticeExchange() {
         return new DirectExchange(NOTICE_EXCHANGE, true, false);
     }
 
+    /**
+     * 处理logExchange相关逻辑。
+     */
     @Bean
     public DirectExchange logExchange() {
         return new DirectExchange(LOG_EXCHANGE, true, false);
     }
 
+    /**
+     * 处理deadLetterExchange相关逻辑。
+     */
     @Bean
     public DirectExchange deadLetterExchange() {
         return new DirectExchange(DEAD_LETTER_EXCHANGE, true, false);
     }
 
+    /**
+     * 查询queue相关逻辑。
+     */
     @Bean
     public Queue selectionQueue() {
         return queueWithDeadLetter(SELECTION_QUEUE);
     }
 
+    /**
+     * 处理noticeQueue相关逻辑。
+     */
     @Bean
     public Queue noticeQueue() {
         return queueWithDeadLetter(NOTICE_QUEUE);
     }
 
+    /**
+     * 处理logQueue相关逻辑。
+     */
     @Bean
     public Queue logQueue() {
         return queueWithDeadLetter(LOG_QUEUE);
     }
 
+    /**
+     * 处理deadLetterQueue相关逻辑。
+     */
     @Bean
     public Queue deadLetterQueue() {
         return new Queue(DEAD_LETTER_QUEUE, true);
     }
 
+    /**
+     * 查询binding相关逻辑。
+     */
     @Bean
     public Binding selectionBinding(Queue selectionQueue, DirectExchange selectionExchange) {
         return BindingBuilder.bind(selectionQueue).to(selectionExchange).with(SELECTION_ROUTING_KEY);
     }
 
+    /**
+     * 处理noticeBinding相关逻辑。
+     */
     @Bean
     public Binding noticeBinding(Queue noticeQueue, DirectExchange noticeExchange) {
         return BindingBuilder.bind(noticeQueue).to(noticeExchange).with(NOTICE_ROUTING_KEY);
     }
 
+    /**
+     * 处理logBinding相关逻辑。
+     */
     @Bean
     public Binding logBinding(Queue logQueue, DirectExchange logExchange) {
         return BindingBuilder.bind(logQueue).to(logExchange).with(LOG_ROUTING_KEY);
     }
 
+    /**
+     * 处理deadLetterBinding相关逻辑。
+     */
     @Bean
     public Binding deadLetterBinding(Queue deadLetterQueue, DirectExchange deadLetterExchange) {
         return BindingBuilder.bind(deadLetterQueue).to(deadLetterExchange).with(DEAD_LETTER_ROUTING_KEY);
     }
 
+    /**
+     * 处理queueWithDeadLetter相关逻辑。
+     */
     private Queue queueWithDeadLetter(String queueName) {
         Map<String, Object> args = new HashMap<>();
         args.put("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE);

@@ -41,6 +41,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
     private final MajorMapper majorMapper;
     private final RedisCacheService redisCacheService;
 
+    /**
+     * 分页查询相关逻辑。
+     */
     @Override
     public IPage<BatchVO> page(long current, long size, String name, Integer status) {
         Page<Batch> page = new Page<>(current, size);
@@ -73,6 +76,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         return voPage;
     }
 
+    /**
+     * 获取Detail。
+     */
     @Override
     public BatchVO getDetail(Long id) {
         Batch b = this.getById(id);
@@ -90,6 +96,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         return vo;
     }
 
+    /**
+     * 获取CurrentBatch。
+     */
     @Override
     public BatchVO getCurrentBatch() {
         return redisCacheService.getOrLoad(
@@ -112,6 +121,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         );
     }
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     public void create(BatchCreateDTO dto) {
         log.info("新增批次：{}", dto.getName());
@@ -128,6 +140,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         log.info("新增批次成功：{}", dto.getName());
     }
 
+    /**
+     * 更新相关逻辑。
+     */
     @Override
     public void update(BatchUpdateDTO dto) {
         log.info("修改批次：{}", dto.getId());
@@ -150,6 +165,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         log.info("修改批次成功：{}", dto.getId());
     }
 
+    /**
+     * 删除by id相关逻辑。
+     */
     @Override
     public void deleteById(Long id) {
         Batch entity = this.getById(id);
@@ -161,6 +179,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         log.info("删除批次成功：{}", id);
     }
 
+    /**
+     * 处理advanceStage相关逻辑。
+     */
     @Override
     public void advanceStage(Long id, String nextStage) {
         Batch entity = this.getById(id);

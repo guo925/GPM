@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Defense 控制器。
+ */
 @Tag(name = "答辩管理")
 @RestController
 @RequestMapping("/api/defense")
@@ -30,12 +33,18 @@ public class DefenseController {
 
     private final DefenseService defenseService;
 
+    /**
+     * 答辩批次列表
+     */
     @Operation(summary = "答辩批次列表")
     @GetMapping("/batches")
     public Result<List<DefenseBatch>> listBatches(@RequestParam(required = false) Long batchId) {
         return Result.success(defenseService.listBatches(batchId));
     }
 
+    /**
+     * 创建答辩批次
+     */
     @Operation(summary = "创建答辩批次")
     @PreAuthorize("hasAuthority('defense:batch:add') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/batch/create")
@@ -44,6 +53,9 @@ public class DefenseController {
         return Result.success();
     }
 
+    /**
+     * 删除答辩批次
+     */
     @Operation(summary = "删除答辩批次")
     @PreAuthorize("hasAuthority('defense:batch:delete') or " + DEFENSE_MANAGE_ROLES)
     @DeleteMapping("/batch/{id}")
@@ -52,12 +64,18 @@ public class DefenseController {
         return Result.success();
     }
 
+    /**
+     * 答辩组列表
+     */
     @Operation(summary = "答辩组列表")
     @GetMapping("/groups")
     public Result<List<DefenseGroup>> listGroups(@RequestParam Long defenseBatchId) {
         return Result.success(defenseService.listGroups(defenseBatchId));
     }
 
+    /**
+     * 创建答辩组
+     */
     @Operation(summary = "创建答辩组")
     @PreAuthorize("hasAuthority('defense:group:add') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/group/create")
@@ -66,6 +84,9 @@ public class DefenseController {
         return Result.success();
     }
 
+    /**
+     * 删除答辩组
+     */
     @Operation(summary = "删除答辩组")
     @PreAuthorize("hasAuthority('defense:group:delete') or " + DEFENSE_MANAGE_ROLES)
     @DeleteMapping("/group/{id}")
@@ -74,12 +95,18 @@ public class DefenseController {
         return Result.success();
     }
 
+    /**
+     * 答辩安排列表
+     */
     @Operation(summary = "答辩安排列表")
     @GetMapping("/arrangements")
     public Result<List<DefenseArrangement>> listArrangements(@RequestParam Long groupId) {
         return Result.success(defenseService.listArrangements(groupId));
     }
 
+    /**
+     * 添加答辩安排
+     */
     @Operation(summary = "添加答辩安排")
     @PreAuthorize("hasAuthority('defense:arrange') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/arrange")
@@ -93,6 +120,9 @@ public class DefenseController {
         return Result.success();
     }
 
+    /**
+     * 录入答辩结果
+     */
     @Operation(summary = "录入答辩结果")
     @PreAuthorize("hasAuthority('defense:result') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/result")
@@ -101,6 +131,9 @@ public class DefenseController {
         return Result.success();
     }
 
+    /**
+     * 查看答辩结果
+     */
     @Operation(summary = "查看答辩结果")
     @GetMapping("/result/{arrangementId}")
     public Result<DefenseResult> getResult(@PathVariable Long arrangementId) {

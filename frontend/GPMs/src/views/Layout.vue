@@ -72,6 +72,11 @@
           <span>审核日志</span>
         </el-menu-item>
 
+        <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN'])" index="/teacher/process-review">
+          <el-icon><DocumentChecked /></el-icon>
+          <span>流程审核</span>
+        </el-menu-item>
+
         <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/defense">
           <el-icon><Calendar /></el-icon>
           <span>答辩管理</span>
@@ -149,7 +154,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore, hasRole, hasAnyRole, getDashboardPath } from '@/stores/auth'
-import { HomeFilled, Setting, Document, Collection, UserFilled, Avatar, DataAnalysis, Monitor, SwitchButton, User, Histogram, Bell, Message, Tickets, Calendar, FolderChecked, Download } from '@element-plus/icons-vue'
+import { HomeFilled, Setting, Document, Collection, UserFilled, Avatar, DataAnalysis, Monitor, SwitchButton, User, Histogram, Bell, Message, Tickets, Calendar, FolderChecked, Download, DocumentChecked } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

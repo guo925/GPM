@@ -37,6 +37,9 @@ public class StudentTopicServiceImpl extends ServiceImpl<StudentTopicMapper, Stu
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
 
+    /**
+     * 分页查询相关逻辑。
+     */
     @Override
     public IPage<StudentTopicVO> page(long current, long size, Long batchId, Long advisorId) {
         Page<StudentTopic> page = new Page<>(current, size);
@@ -82,6 +85,9 @@ public class StudentTopicServiceImpl extends ServiceImpl<StudentTopicMapper, Stu
         return voPage;
     }
 
+    /**
+     * 获取ByStudentId。
+     */
     @Override
     public StudentTopicVO getByStudentId(Long studentId) {
         if (studentId == null) return null;

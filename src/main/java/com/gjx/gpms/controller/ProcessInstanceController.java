@@ -27,6 +27,9 @@ public class ProcessInstanceController {
 
     private final ProcessInstanceService processInstanceService;
 
+    /**
+     * 提交阶段任务
+     */
     @Operation(summary = "提交阶段任务")
     @PreAuthorize("hasAuthority('process:submit')")
     @PostMapping("/submit")
@@ -35,6 +38,9 @@ public class ProcessInstanceController {
         return Result.success();
     }
 
+    /**
+     * 审核阶段任务
+     */
     @Operation(summary = "审核阶段任务")
     @PreAuthorize("hasAuthority('process:review')")
     @PutMapping("/review")
@@ -43,6 +49,9 @@ public class ProcessInstanceController {
         return Result.success();
     }
 
+    /**
+     * 查看流程记录
+     */
     @Operation(summary = "查看流程记录")
     @PreAuthorize("hasAuthority('process:query')")
     @GetMapping("/list/{studentTopicId}")

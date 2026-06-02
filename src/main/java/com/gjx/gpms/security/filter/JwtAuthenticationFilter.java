@@ -29,6 +29,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final RedisCacheService redisCacheService;
 
+    /**
+     * 处理doFilterInternal相关逻辑。
+     */
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,

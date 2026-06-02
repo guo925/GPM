@@ -26,6 +26,9 @@ public class MajorController {
 
     private final MajorService majorService;
 
+    /**
+     * 专业列表
+     */
     @Operation(summary = "专业列表")
     @PreAuthorize("hasAuthority('system:major:list')")
     @GetMapping("/list")
@@ -33,6 +36,9 @@ public class MajorController {
         return Result.success(majorService.listAll(collegeId));
     }
 
+    /**
+     * 新增专业
+     */
     @Operation(summary = "新增专业")
     @PreAuthorize("hasAuthority('system:major:add')")
     @PostMapping("/create")
@@ -41,6 +47,9 @@ public class MajorController {
         return Result.success();
     }
 
+    /**
+     * 修改专业
+     */
     @Operation(summary = "修改专业")
     @PreAuthorize("hasAuthority('system:major:update')")
     @PutMapping("/update/{id}")
@@ -49,6 +58,9 @@ public class MajorController {
         return Result.success();
     }
 
+    /**
+     * 删除专业
+     */
     @Operation(summary = "删除专业")
     @PreAuthorize("hasAuthority('system:major:delete')")
     @DeleteMapping("/{id}")

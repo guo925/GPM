@@ -42,6 +42,9 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
     private final UserMapper userMapper;
     private final AuditLogMapper auditLogMapper;
 
+    /**
+     * 提交相关逻辑。
+     */
     @Override
     public void submit(ProcessSubmitDTO dto) {
         Long userId = UserContext.getUserId();
@@ -97,6 +100,9 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         log.info("阶段[{}]首次提交", dto.getStage());
     }
 
+    /**
+     * 审核相关逻辑。
+     */
     @Override
     public void review(ProcessReviewDTO dto) {
         Long userId = UserContext.getUserId();
@@ -136,6 +142,9 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         log.info("流程实例[{}]审核完成：{}", dto.getId(), dto.getStatus());
     }
 
+    /**
+     * 获取ByStudentTopic。
+     */
     @Override
     public List<ProcessInstanceVO> getByStudentTopic(Long studentTopicId) {
         List<ProcessInstance> list = this.list(
@@ -147,6 +156,9 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         return toVOList(list);
     }
 
+    /**
+     * 获取CurrentStage。
+     */
     @Override
     public ProcessInstanceVO getCurrentStage(Long studentTopicId, String stage) {
         ProcessInstance pi = this.getOne(
@@ -166,6 +178,9 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         return toVO(pi);
     }
 
+    /**
+     * 转换vo相关逻辑。
+     */
     private ProcessInstanceVO toVO(ProcessInstance pi) {
         Map<Long, String> userMap = userMapper.selectList(null).stream()
                 .collect(Collectors.toMap(User::getId, User::getRealName));
@@ -200,6 +215,9 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         return vo;
     }
 
+    /**
+     * 转换volist相关逻辑。
+     */
     private List<ProcessInstanceVO> toVOList(List<ProcessInstance> list) {
         return list.stream().map(this::toVO).collect(Collectors.toList());
     }

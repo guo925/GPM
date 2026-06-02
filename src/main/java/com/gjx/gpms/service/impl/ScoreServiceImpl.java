@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Score 服务实现类。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,9 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
 
+    /**
+     * 计算相关逻辑。
+     */
     @Override
     public ScoreSheetVO calculate(ScoreSheetDTO dto) {
         log.info("计算成绩，学生选题[{}]", dto.getStudentTopicId());
@@ -98,6 +104,9 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
         return getDetail(dto.getStudentTopicId());
     }
 
+    /**
+     * 保存detail相关逻辑。
+     */
     private void saveDetail(Long sheetId, String type, BigDecimal score, BigDecimal weight) {
         ScoreDetail detail = new ScoreDetail();
         detail.setSheetId(sheetId);
@@ -108,6 +117,9 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
         scoreDetailMapper.insert(detail);
     }
 
+    /**
+     * 提交相关逻辑。
+     */
     @Override
     public void submit(Long id) {
         ScoreSheet sheet = this.getById(id);
@@ -116,6 +128,9 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
         this.updateById(sheet);
     }
 
+    /**
+     * 审核相关逻辑。
+     */
     @Override
     public void review(Long id, String status, String comment) {
         ScoreSheet sheet = this.getById(id);
@@ -125,6 +140,9 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
         this.updateById(sheet);
     }
 
+    /**
+     * 获取Detail。
+     */
     @Override
     public ScoreSheetVO getDetail(Long studentTopicId) {
         ScoreSheet sheet = this.getOne(
@@ -177,6 +195,9 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
         return vo;
     }
 
+    /**
+     * 查询列表by batch相关逻辑。
+     */
     @Override
     public List<ScoreSheetVO> listByBatch(Long batchId) {
         List<ScoreSheet> sheets = this.list(

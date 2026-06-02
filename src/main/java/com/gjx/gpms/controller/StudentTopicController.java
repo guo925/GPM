@@ -33,6 +33,9 @@ public class StudentTopicController {
         return Result.success(studentTopicService.page(current, size, batchId, advisorId));
     }
 
+    /**
+     * 我的选题结果
+     */
     @Operation(summary = "我的选题结果")
     @GetMapping("/my")
     public Result<StudentTopicVO> getMyTopic() {

@@ -26,6 +26,9 @@ public class GuidanceRecordController {
 
     private final GuidanceRecordService guidanceRecordService;
 
+    /**
+     * 提交周记
+     */
     @Operation(summary = "提交周记")
     @PreAuthorize("hasAuthority('guidance:submit')")
     @PostMapping("/create")
@@ -34,6 +37,9 @@ public class GuidanceRecordController {
         return Result.success();
     }
 
+    /**
+     * 批阅周记
+     */
     @Operation(summary = "批阅周记")
     @PreAuthorize("hasAuthority('guidance:review')")
     @PutMapping("/review/{id}")
@@ -42,6 +48,9 @@ public class GuidanceRecordController {
         return Result.success();
     }
 
+    /**
+     * 查看指导记录
+     */
     @Operation(summary = "查看指导记录")
     @PreAuthorize("hasAuthority('guidance:query')")
     @GetMapping("/list/{studentTopicId}")

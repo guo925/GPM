@@ -33,6 +33,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
 
     private final RolePermissionMapper rolePermissionMapper;
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     @Transactional
     public void create(PermissionCreateDTO dto) {
@@ -58,6 +61,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         log.info("新增权限成功：{}", dto.getPermissionCode());
     }
 
+    /**
+     * 更新相关逻辑。
+     */
     @Override
     @Transactional
     public void update(PermissionUpdateDTO dto) {
@@ -89,6 +95,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         log.info("修改权限成功：{}", dto.getId());
     }
 
+    /**
+     * 删除by id相关逻辑。
+     */
     @Override
     @Transactional
     public void deleteById(Long id) {
@@ -112,6 +121,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         log.info("删除权限成功：{}", id);
     }
 
+    /**
+     * 查询列表all相关逻辑。
+     */
     @Override
     public List<PermissionVO> listAll() {
 
@@ -128,6 +140,9 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 处理tree相关逻辑。
+     */
     @Override
     public Map<String, List<PermissionVO>> tree() {
 

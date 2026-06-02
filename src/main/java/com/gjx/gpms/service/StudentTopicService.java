@@ -12,7 +12,13 @@ import com.gjx.gpms.vo.StudentTopicVO;
  */
 public interface StudentTopicService extends IService<StudentTopic> {
 
+    /**
+     * 分页查询相关逻辑。
+     */
     IPage<StudentTopicVO> page(long current, long size, Long batchId, Long advisorId);
 
+    /**
+     * 获取ByStudentId。
+     */
     StudentTopicVO getByStudentId(Long studentId);
 }

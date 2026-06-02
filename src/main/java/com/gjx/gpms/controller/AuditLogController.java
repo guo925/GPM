@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * AuditLog 控制器。
+ */
 @Tag(name = "审核日志")
 @RestController
 @RequestMapping("/api/log/audit")

@@ -36,6 +36,9 @@ public class FileStorageServiceImpl implements FileStorageService {
     private final FileStorageProperties fileStorageProperties;
     private final AliyunOssProperties aliyunOssProperties;
 
+    /**
+     * 上传相关逻辑。
+     */
     @Override
     public FileUploadVO upload(MultipartFile file, String bizType) {
         validate(file);
@@ -46,6 +49,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         return uploadToLocal(file, objectKey);
     }
 
+    /**
+     * 上传to local相关逻辑。
+     */
     private FileUploadVO uploadToLocal(MultipartFile file, String objectKey) {
         try {
             Path root = Path.of(fileStorageProperties.getLocalPath()).toAbsolutePath().normalize();
@@ -62,6 +68,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
     }
 
+    /**
+     * 上传to oss相关逻辑。
+     */
     private FileUploadVO uploadToOss(MultipartFile file, String objectKey) {
         if (StringUtils.isAnyBlank(
                 aliyunOssProperties.getEndpoint(),
@@ -88,6 +97,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
     }
 
+    /**
+     * 校验相关逻辑。
+     */
     private void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("请选择上传文件");
@@ -101,6 +113,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
     }
 
+    /**
+     * 构建object key相关逻辑。
+     */
     private String buildObjectKey(String originalName, String bizType) {
         String safeBizType = StringUtils.defaultIfBlank(bizType, "common").replaceAll("[^a-zA-Z0-9_-]", "");
         String ext = getExtension(originalName);
@@ -115,6 +130,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         );
     }
 
+    /**
+     * 获取Extension。
+     */
     private String getExtension(String filename) {
         String name = StringUtils.defaultString(filename);
         int index = name.lastIndexOf('.');
@@ -124,6 +142,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         return name.substring(index + 1).toLowerCase();
     }
 
+    /**
+     * 构建vo相关逻辑。
+     */
     private FileUploadVO buildVO(MultipartFile file, String objectKey, String url) {
         FileUploadVO vo = new FileUploadVO();
         vo.setOriginalName(file.getOriginalFilename());
@@ -134,11 +155,17 @@ public class FileStorageServiceImpl implements FileStorageService {
         return vo;
     }
 
+    /**
+     * 构建oss url相关逻辑。
+     */
     private String buildOssUrl(String objectKey) {
         String endpoint = aliyunOssProperties.getEndpoint().replace("https://", "").replace("http://", "");
         return "https://" + aliyunOssProperties.getBucketName() + "." + endpoint + "/" + objectKey;
     }
 
+    /**
+     * 处理normalizePrefix相关逻辑。
+     */
     private String normalizePrefix(String prefix) {
         if (StringUtils.isBlank(prefix)) {
             return "/uploads";

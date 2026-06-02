@@ -27,6 +27,9 @@ public class ScoreSheetVO {
     private List<ScoreDetailVO> details;
     private LocalDateTime createdAt;
 
+    /**
+     * ScoreDetail 视图对象。
+     */
     @Data
     public static class ScoreDetailVO {
         private String type;

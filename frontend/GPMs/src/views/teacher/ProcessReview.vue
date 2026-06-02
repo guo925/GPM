@@ -38,7 +38,7 @@
           <el-button v-if="s.status === 'submitted'" type="danger" size="small" style="margin-top:10px" @click="openReject(s)">
             驳回
           </el-button>
-          <el-button v-if="s.data?.content" size="small" style="margin-top:10px" :loading="checkDialog.loading && checkDialog.processInstanceId === s.data.id" @click="runAiCheck(s)">
+          <el-button v-if="s.data" size="small" style="margin-top:10px" :loading="checkDialog.loading && checkDialog.processInstanceId === s.data.id" @click="runAiCheck(s)">
             AI查重
           </el-button>
         </el-card>
@@ -139,7 +139,11 @@ const progressColor = computed(() => {
 })
 
 const fetchStudents = async () => {
-  const res = await getStudentTopicPage({ current: 1, size: 100, advisorId: authStore.user.userId })
+  const params = { current: 1, size: 100 }
+  if (authStore.roles.includes('TEACHER')) {
+    params.advisorId = authStore.user.userId
+  }
+  const res = await getStudentTopicPage(params)
   students.value = res.data?.records || res.data || []
 }
 

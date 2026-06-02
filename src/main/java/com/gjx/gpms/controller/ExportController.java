@@ -32,6 +32,9 @@ public class ExportController {
     private final StudentTopicMapper studentTopicMapper;
     private final UserMapper userMapper;
 
+    /**
+     * 导出成绩单
+     */
     @Operation(summary = "导出成绩单")
     @PreAuthorize("hasAuthority('export:score')")
     @GetMapping("/scores/{batchId}")

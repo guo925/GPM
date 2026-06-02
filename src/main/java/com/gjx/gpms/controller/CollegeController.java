@@ -26,6 +26,9 @@ public class CollegeController {
 
     private final CollegeService collegeService;
 
+    /**
+     * 学院列表
+     */
     @Operation(summary = "学院列表")
     @PreAuthorize("hasAuthority('system:college:list')")
     @GetMapping("/list")
@@ -33,6 +36,9 @@ public class CollegeController {
         return Result.success(collegeService.listAll());
     }
 
+    /**
+     * 新增学院
+     */
     @Operation(summary = "新增学院")
     @PreAuthorize("hasAuthority('system:college:add')")
     @PostMapping("/create")
@@ -41,6 +47,9 @@ public class CollegeController {
         return Result.success();
     }
 
+    /**
+     * 修改学院
+     */
     @Operation(summary = "修改学院")
     @PreAuthorize("hasAuthority('system:college:update')")
     @PutMapping("/update/{id}")
@@ -49,6 +58,9 @@ public class CollegeController {
         return Result.success();
     }
 
+    /**
+     * 删除学院
+     */
     @Operation(summary = "删除学院")
     @PreAuthorize("hasAuthority('system:college:delete')")
     @DeleteMapping("/{id}")

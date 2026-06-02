@@ -26,6 +26,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CollegeServiceImpl extends ServiceImpl<CollegeMapper, College> implements CollegeService {
 
+    /**
+     * 查询列表all相关逻辑。
+     */
     @Override
     public List<CollegeVO> listAll() {
         List<College> list = this.list(
@@ -39,6 +42,9 @@ public class CollegeServiceImpl extends ServiceImpl<CollegeMapper, College> impl
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     public void create(CollegeCreateDTO dto) {
         log.info("新增学院：{}", dto.getCode());
@@ -58,6 +64,9 @@ public class CollegeServiceImpl extends ServiceImpl<CollegeMapper, College> impl
         log.info("新增学院成功：{}", dto.getCode());
     }
 
+    /**
+     * 更新相关逻辑。
+     */
     @Override
     public void update(Long id, CollegeCreateDTO dto) {
         log.info("修改学院：{}", id);
@@ -85,6 +94,9 @@ public class CollegeServiceImpl extends ServiceImpl<CollegeMapper, College> impl
         log.info("修改学院成功：{}", id);
     }
 
+    /**
+     * 删除by id相关逻辑。
+     */
     @Override
     public void deleteById(Long id) {
         College entity = this.getById(id);

@@ -213,7 +213,7 @@ const router = createRouter({
           path: 'teacher/process-review',
           name: 'ProcessReview',
           component: () => import('@/views/teacher/ProcessReview.vue'),
-          meta: { title: '流程审核' }
+          meta: { title: '流程审核', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
         },
         {
           path: 'teacher/score-entry',

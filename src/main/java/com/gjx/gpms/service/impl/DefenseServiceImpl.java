@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Defense 服务实现类。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,9 @@ public class DefenseServiceImpl implements DefenseService {
     private final DefenseArrangementMapper defenseArrangementMapper;
     private final DefenseResultMapper defenseResultMapper;
 
+    /**
+     * 查询列表batches相关逻辑。
+     */
     @Override
     public List<DefenseBatch> listBatches(Long batchId) {
         return defenseBatchMapper.selectList(
@@ -37,6 +43,9 @@ public class DefenseServiceImpl implements DefenseService {
         );
     }
 
+    /**
+     * 创建batch相关逻辑。
+     */
     @Override
     public void createBatch(DefenseBatchDTO dto) {
         DefenseBatch entity = new DefenseBatch();
@@ -45,11 +54,17 @@ public class DefenseServiceImpl implements DefenseService {
         log.info("创建答辩批次：{}", dto.getName());
     }
 
+    /**
+     * 删除batch相关逻辑。
+     */
     @Override
     public void deleteBatch(Long id) {
         defenseBatchMapper.deleteById(id);
     }
 
+    /**
+     * 查询列表groups相关逻辑。
+     */
     @Override
     public List<DefenseGroup> listGroups(Long defenseBatchId) {
         return defenseGroupMapper.selectList(
@@ -58,6 +73,9 @@ public class DefenseServiceImpl implements DefenseService {
         );
     }
 
+    /**
+     * 创建group相关逻辑。
+     */
     @Override
     @Transactional
     public void createGroup(DefenseGroupDTO dto) {
@@ -87,6 +105,9 @@ public class DefenseServiceImpl implements DefenseService {
         log.info("创建答辩组：{}", dto.getName());
     }
 
+    /**
+     * 删除group相关逻辑。
+     */
     @Override
     public void deleteGroup(Long id) {
         defenseGroupMemberMapper.delete(
@@ -95,6 +116,9 @@ public class DefenseServiceImpl implements DefenseService {
         defenseGroupMapper.deleteById(id);
     }
 
+    /**
+     * 查询列表arrangements相关逻辑。
+     */
     @Override
     public List<DefenseArrangement> listArrangements(Long groupId) {
         return defenseArrangementMapper.selectList(
@@ -103,6 +127,9 @@ public class DefenseServiceImpl implements DefenseService {
         );
     }
 
+    /**
+     * 新增arrangement相关逻辑。
+     */
     @Override
     public void addArrangement(Long groupId, Long studentId, String defenseTime, String location) {
         DefenseGroup group = defenseGroupMapper.selectById(groupId);
@@ -118,6 +145,9 @@ public class DefenseServiceImpl implements DefenseService {
         defenseArrangementMapper.insert(da);
     }
 
+    /**
+     * 保存result相关逻辑。
+     */
     @Override
     public void saveResult(DefenseResultDTO dto) {
         DefenseResult result = defenseResultMapper.selectOne(
@@ -145,6 +175,9 @@ public class DefenseServiceImpl implements DefenseService {
         log.info("保存答辩结果：安排[{}]，决策[{}]", dto.getArrangementId(), dto.getDecision());
     }
 
+    /**
+     * 获取Result。
+     */
     @Override
     public DefenseResult getResult(Long arrangementId) {
         return defenseResultMapper.selectOne(

@@ -17,6 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * OperationLog 控制器。
+ */
 @Tag(name = "操作日志")
 @RestController
 @RequestMapping("/api/log/operation")
@@ -42,6 +45,9 @@ public class OperationLogController {
         return Result.success(operationLogMapper.selectPage(page, wrapper));
     }
 
+    /**
+     * 操作日志统计
+     */
     @Operation(summary = "操作日志统计")
     @PreAuthorize("hasAuthority('log:statistics')")
     @GetMapping("/statistics")
@@ -57,6 +63,9 @@ public class OperationLogController {
         return Result.success(data);
     }
 
+    /**
+     * 处理queryLong相关逻辑。
+     */
     private Long queryLong(String sql) {
         try {
             Long value = jdbcTemplate.queryForObject(sql, Long.class);
@@ -66,6 +75,9 @@ public class OperationLogController {
         }
     }
 
+    /**
+     * 处理queryList相关逻辑。
+     */
     private List<Map<String, Object>> queryList(String sql) {
         try {
             return jdbcTemplate.queryForList(sql);

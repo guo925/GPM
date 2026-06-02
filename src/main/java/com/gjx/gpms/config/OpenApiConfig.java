@@ -12,6 +12,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * 处理springOpenAPI相关逻辑。
+     */
     @Bean
     public OpenAPI springOpenAPI() {
 

@@ -39,6 +39,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     private final RolePermissionMapper rolePermissionMapper;
     private final PermissionMapper permissionMapper;
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     @Transactional
     public void create(RoleCreateDTO dto) {
@@ -79,6 +82,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         log.info("新增角色成功：{}", dto.getRoleCode());
     }
 
+    /**
+     * 更新相关逻辑。
+     */
     @Override
     @Transactional
     public void update(RoleUpdateDTO dto) {
@@ -129,6 +135,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         log.info("修改角色成功：{}", dto.getId());
     }
 
+    /**
+     * 删除by id相关逻辑。
+     */
     @Override
     @Transactional
     public void deleteById(Long id) {
@@ -153,6 +162,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         log.info("删除角色成功：{}", id);
     }
 
+    /**
+     * 分页查询相关逻辑。
+     */
     @Override
     public IPage<RoleVO> page(RolePageDTO dto) {
 
@@ -181,6 +193,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         return voPage;
     }
 
+    /**
+     * 查询列表all相关逻辑。
+     */
     @Override
     public List<RoleVO> listAll() {
 
@@ -198,6 +213,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 获取RoleById。
+     */
     @Override
     public RoleVO getRoleById(Long id) {
 

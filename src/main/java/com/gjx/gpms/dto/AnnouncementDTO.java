@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+/**
+ * Announcement 数据传输对象。
+ */
 @Data
 @Schema(description = "公告请求")
 public class AnnouncementDTO {

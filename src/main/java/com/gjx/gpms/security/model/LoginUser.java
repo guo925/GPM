@@ -54,6 +54,9 @@ public class LoginUser implements UserDetails, Serializable {
     @JsonIgnore
     private Collection<? extends GrantedAuthority> authorities;
 
+    /**
+     * 获取Authorities。
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (authorities == null) {
@@ -73,26 +76,41 @@ public class LoginUser implements UserDetails, Serializable {
         return authorities;
     }
 
+    /**
+     * 获取Password。
+     */
     @Override
     public String getPassword() {
         return password;
     }
 
+    /**
+     * 处理isAccountNonExpired相关逻辑。
+     */
     @Override
     public boolean isAccountNonExpired() {
         return true;
     }
 
+    /**
+     * 处理isAccountNonLocked相关逻辑。
+     */
     @Override
     public boolean isAccountNonLocked() {
         return true;
     }
 
+    /**
+     * 处理isCredentialsNonExpired相关逻辑。
+     */
     @Override
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
+    /**
+     * 处理isEnabled相关逻辑。
+     */
     @Override
     public boolean isEnabled() {
         return true;

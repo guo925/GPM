@@ -19,16 +19,25 @@ public class MqProducer {
 
     private final RabbitTemplate rabbitTemplate;
 
+    /**
+     * 发送selection相关逻辑。
+     */
     public void sendSelection(SelectionSubmitMessage message) {
         rabbitTemplate.convertAndSend(RabbitMQConfig.SELECTION_EXCHANGE, RabbitMQConfig.SELECTION_ROUTING_KEY, message);
         log.info("已发送选题异步消息，messageId={}", message.getMessageId());
     }
 
+    /**
+     * 发送notice相关逻辑。
+     */
     public void sendNotice(NoticeMessage message) {
         rabbitTemplate.convertAndSend(RabbitMQConfig.NOTICE_EXCHANGE, RabbitMQConfig.NOTICE_ROUTING_KEY, message);
         log.info("已发送通知异步消息，messageId={}", message.getMessageId());
     }
 
+    /**
+     * 发送operation log相关逻辑。
+     */
     public void sendOperationLog(OperationLogMessage message) {
         rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.LOG_ROUTING_KEY, message);
         log.info("已发送操作日志异步消息，messageId={}", message.getMessageId());

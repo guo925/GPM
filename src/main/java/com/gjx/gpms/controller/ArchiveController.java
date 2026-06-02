@@ -30,6 +30,9 @@ public class ArchiveController {
     private final ArchiveService archiveService;
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * 手动归档指定批次
+     */
     @Operation(summary = "手动归档指定批次")
     @PreAuthorize("hasAuthority('batch:stage')")
     @PostMapping("/batch/{batchId}")
@@ -38,6 +41,9 @@ public class ArchiveController {
         return Result.success();
     }
 
+    /**
+     * 归档所有历史批次
+     */
     @Operation(summary = "归档所有历史批次")
     @PreAuthorize("hasAuthority('batch:stage')")
     @PostMapping("/history-batches")
@@ -46,6 +52,9 @@ public class ArchiveController {
         return Result.success();
     }
 
+    /**
+     * 归档日志
+     */
     @Operation(summary = "归档日志")
     @PreAuthorize("hasAuthority('batch:stage')")
     @GetMapping("/logs")

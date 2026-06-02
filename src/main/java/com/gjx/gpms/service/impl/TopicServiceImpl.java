@@ -44,6 +44,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     private final RedisCacheService redisCacheService;
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * 分页查询相关逻辑。
+     */
     @Override
     public IPage<TopicVO> page(long current, long size, Long batchId, String status) {
         Page<Topic> page = new Page<>(current, size);
@@ -71,6 +74,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return voPage;
     }
 
+    /**
+     * 获取Detail。
+     */
     @Override
     public TopicVO getDetail(Long id) {
         if (id == null || id <= 0) {
@@ -95,6 +101,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         );
     }
 
+    /**
+     * 获取HotTopics。
+     */
     @Override
     @SuppressWarnings("unchecked")
     public List<TopicVO> getHotTopics() {
@@ -120,6 +129,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return result;
     }
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     public void create(TopicCreateDTO dto) {
         log.info("新增课题：{}", dto.getTitle());
@@ -146,6 +158,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         log.info("新增课题成功：{}", dto.getTitle());
     }
 
+    /**
+     * 更新相关逻辑。
+     */
     @Override
     public void update(Long id, TopicCreateDTO dto) {
         Topic topic = this.getById(id);
@@ -162,6 +177,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         log.info("修改课题成功：{}", id);
     }
 
+    /**
+     * 删除by id相关逻辑。
+     */
     @Override
     public void deleteById(Long id) {
         Topic topic = this.getById(id);
@@ -175,6 +193,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         log.info("删除课题成功：{}", id);
     }
 
+    /**
+     * 审核相关逻辑。
+     */
     @Override
     public void review(TopicReviewDTO dto) {
         Topic topic = this.getById(dto.getId());
@@ -190,6 +211,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         log.info("审核课题[{}]：{}", dto.getId(), dto.getStatus());
     }
 
+    /**
+     * 转换vo相关逻辑。
+     */
     private TopicVO toVO(Topic topic, Map<Long, String> batchMap, Map<Long, String> userMap) {
         TopicVO vo = new TopicVO();
         BeanUtils.copyProperties(topic, vo);
@@ -198,6 +222,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return vo;
     }
 
+    /**
+     * 同步topic current相关逻辑。
+     */
     private void syncTopicCurrent(Topic topic) {
         try {
             jdbcTemplate.update("""
@@ -223,6 +250,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         }
     }
 
+    /**
+     * 删除topic current相关逻辑。
+     */
     private void deleteTopicCurrent(Long id) {
         try {
             jdbcTemplate.update("DELETE FROM topic_current WHERE id=?", id);

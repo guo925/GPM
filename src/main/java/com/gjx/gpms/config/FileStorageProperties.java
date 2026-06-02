@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "file.storage")
 public class FileStorageProperties {
 
-    private String type = "local";
+    private String type = "oss";
 
     private String localPath = "./uploads";
 

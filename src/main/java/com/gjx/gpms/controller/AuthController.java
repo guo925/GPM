@@ -32,6 +32,9 @@ public class AuthController {
     private final RedisCacheService redisCacheService;
     private final UserRoleMapper userRoleMapper;
 
+    /**
+     * 登录相关逻辑。
+     */
     @PostMapping("/login")
     public Result<LoginVO> login(
             @RequestBody @Valid LoginDTO loginDTO
@@ -39,6 +42,9 @@ public class AuthController {
         return Result.success(authService.login(loginDTO));
     }
 
+    /**
+     * 退出登录相关逻辑。
+     */
     @PostMapping("/logout")
     public Result<Void> logout(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
@@ -59,6 +65,9 @@ public class AuthController {
         return Result.success();
     }
 
+    /**
+     * 处理me相关逻辑。
+     */
     @GetMapping("/me")
     public Result<LoginVO> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

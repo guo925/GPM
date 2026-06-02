@@ -39,6 +39,9 @@ public class FileController {
     private final FileStorageService fileStorageService;
     private final FileStorageProperties fileStorageProperties;
 
+    /**
+     * 上传文件
+     */
     @Operation(summary = "上传文件")
     @PostMapping("/upload")
     public Result<FileUploadVO> upload(
@@ -48,6 +51,9 @@ public class FileController {
         return Result.success(fileStorageService.upload(file, bizType));
     }
 
+    /**
+     * 查看文件
+     */
     @Operation(summary = "查看文件")
     @GetMapping("/view")
     public ResponseEntity<Resource> view(@RequestParam String path) {
@@ -85,6 +91,9 @@ public class FileController {
         }
     }
 
+    /**
+     * 处理normalizePrefix相关逻辑。
+     */
     private String normalizePrefix(String prefix) {
         if (prefix == null || prefix.isBlank()) {
             return "/uploads";

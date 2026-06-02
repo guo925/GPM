@@ -27,6 +27,9 @@ public class SelectionRecordController {
 
     private final SelectionRecordService selectionRecordService;
 
+    /**
+     * 提交选题志愿
+     */
     @Operation(summary = "提交选题志愿")
     @PreAuthorize("hasAuthority('selection:submit')")
     @PostMapping("/submit")
@@ -35,6 +38,9 @@ public class SelectionRecordController {
         return Result.success();
     }
 
+    /**
+     * 我的志愿
+     */
     @Operation(summary = "我的志愿")
     @PreAuthorize("hasAuthority('selection:my')")
     @GetMapping("/my")
@@ -42,6 +48,9 @@ public class SelectionRecordController {
         return Result.success(selectionRecordService.getMySelections(batchId));
     }
 
+    /**
+     * 教师审核列表
+     */
     @Operation(summary = "教师审核列表")
     @PreAuthorize("hasAuthority('selection:review')")
     @GetMapping("/review-list")
@@ -49,6 +58,9 @@ public class SelectionRecordController {
         return Result.success(selectionRecordService.getTeacherReviewList(batchId));
     }
 
+    /**
+     * 教师审核
+     */
     @Operation(summary = "教师审核")
     @PreAuthorize("hasAuthority('selection:review')")
     @PutMapping("/review")
@@ -57,6 +69,9 @@ public class SelectionRecordController {
         return Result.success();
     }
 
+    /**
+     * 系统自动分配
+     */
     @Operation(summary = "系统自动分配")
     @PreAuthorize("hasAuthority('selection:allocate')")
     @PostMapping("/auto-allocate/{batchId}")

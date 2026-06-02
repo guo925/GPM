@@ -31,6 +31,9 @@ public class MajorServiceImpl extends ServiceImpl<MajorMapper, Major> implements
 
     private final CollegeMapper collegeMapper;
 
+    /**
+     * 查询列表all相关逻辑。
+     */
     @Override
     public List<MajorVO> listAll(Long collegeId) {
         LambdaQueryWrapper<Major> wrapper = new LambdaQueryWrapper<>();
@@ -52,6 +55,9 @@ public class MajorServiceImpl extends ServiceImpl<MajorMapper, Major> implements
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 创建相关逻辑。
+     */
     @Override
     public void create(MajorCreateDTO dto) {
         log.info("新增专业：{}", dto.getCode());
@@ -71,6 +77,9 @@ public class MajorServiceImpl extends ServiceImpl<MajorMapper, Major> implements
         log.info("新增专业成功：{}", dto.getCode());
     }
 
+    /**
+     * 更新相关逻辑。
+     */
     @Override
     public void update(Long id, MajorCreateDTO dto) {
         log.info("修改专业：{}", id);
@@ -99,6 +108,9 @@ public class MajorServiceImpl extends ServiceImpl<MajorMapper, Major> implements
         log.info("修改专业成功：{}", id);
     }
 
+    /**
+     * 删除by id相关逻辑。
+     */
     @Override
     public void deleteById(Long id) {
         Major entity = this.getById(id);

@@ -24,6 +24,9 @@ public class NoticeConsumer {
     private final NotificationMapper notificationMapper;
     private final RedisCacheService redisCacheService;
 
+    /**
+     * 消费相关逻辑。
+     */
     @RabbitListener(queues = RabbitMQConfig.NOTICE_QUEUE)
     public void consume(NoticeMessage message) {
         String idempotentKey = "mq:notice:done:" + message.getMessageId();

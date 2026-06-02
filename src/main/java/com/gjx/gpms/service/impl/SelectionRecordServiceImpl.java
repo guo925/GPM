@@ -56,6 +56,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
     private final OperationLogProducer operationLogProducer;
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * 提交preferences相关逻辑。
+     */
     @Override
     public void submitPreferences(SelectionSubmitDTO dto) {
         Long studentId = UserContext.getUserId();
@@ -108,6 +111,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         log.info("学生[{}]提交选题请求已进入异步队列，共{}个志愿", studentId, dto.getTopicIds().size());
     }
 
+    /**
+     * 获取MySelections。
+     */
     @Override
     public List<SelectionRecordVO> getMySelections(Long batchId) {
         Long studentId = UserContext.getUserId();
@@ -122,6 +128,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         return toVOList(records);
     }
 
+    /**
+     * 获取TeacherReviewList。
+     */
     @Override
     public List<SelectionRecordVO> getTeacherReviewList(Long batchId) {
         Long teacherId = UserContext.getUserId();
@@ -148,6 +157,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         return toVOList(records);
     }
 
+    /**
+     * 处理teacherReview相关逻辑。
+     */
     @Override
     @Transactional
     public void teacherReview(TeacherReviewDTO dto) {
@@ -215,6 +227,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         }
     }
 
+    /**
+     * 处理autoAllocate相关逻辑。
+     */
     @Override
     @Transactional
     public void autoAllocate(Long batchId) {
@@ -289,6 +304,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         log.info("系统自动分配完成，批次[{}]", batchId);
     }
 
+    /**
+     * 处理preDeductQuota相关逻辑。
+     */
     private void preDeductQuota(Long batchId, Long studentId, Long topicId) {
         Topic topic = topicMapper.selectById(topicId);
         int remain = Math.max(0, (topic.getMaxCapacity() == null ? 0 : topic.getMaxCapacity())
@@ -317,6 +335,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         }
     }
 
+    /**
+     * 转换volist相关逻辑。
+     */
     private List<SelectionRecordVO> toVOList(List<SelectionRecord> records) {
         Map<Long, String> userMap = userMapper.selectList(null).stream()
                 .collect(Collectors.toMap(User::getId, User::getRealName));
@@ -345,6 +366,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 同步selection current相关逻辑。
+     */
     private void syncSelectionCurrent(SelectionRecord record) {
         try {
             jdbcTemplate.update("""
@@ -368,6 +392,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         }
     }
 
+    /**
+     * 同步topic current相关逻辑。
+     */
     private void syncTopicCurrent(Topic topic) {
         try {
             jdbcTemplate.update("UPDATE topic_current SET current_count=?, updated_at=? WHERE id=?",

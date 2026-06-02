@@ -17,6 +17,9 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Notification 控制器。
+ */
 @Tag(name = "通知管理")
 @RestController
 @RequestMapping("/api/notification")
@@ -79,6 +82,9 @@ public class NotificationController {
         return Result.success(page);
     }
 
+    /**
+     * 未读数量
+     */
     @Operation(summary = "未读数量")
     @GetMapping("/unread-count")
     public Result<Long> unreadCount() {
@@ -98,6 +104,9 @@ public class NotificationController {
         return Result.success(count + (announcementCount == null ? 0 : announcementCount));
     }
 
+    /**
+     * 标记已读
+     */
     @Operation(summary = "标记已读")
     @PutMapping("/read/{id}")
     public Result<Void> markRead(@PathVariable Long id) {
@@ -119,6 +128,9 @@ public class NotificationController {
         return Result.success();
     }
 
+    /**
+     * 转换local date time相关逻辑。
+     */
     private LocalDateTime toLocalDateTime(Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toLocalDateTime();
     }

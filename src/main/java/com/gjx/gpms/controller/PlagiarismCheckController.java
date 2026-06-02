@@ -22,6 +22,9 @@ public class PlagiarismCheckController {
 
     private final PlagiarismCheckService plagiarismCheckService;
 
+    /**
+     * 提交查重
+     */
     @Operation(summary = "提交查重")
     @PreAuthorize("hasAuthority('plagiarism:check')")
     @PostMapping("/check")

@@ -7,6 +7,9 @@ package com.gjx.gpms.common.exception;
  */
 public class BusinessException extends RuntimeException {
 
+    /**
+     * 处理BusinessException相关逻辑。
+     */
     public BusinessException(String message) {
         super(message);
     }

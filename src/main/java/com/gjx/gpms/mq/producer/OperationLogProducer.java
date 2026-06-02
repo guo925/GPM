@@ -15,6 +15,9 @@ public class OperationLogProducer {
 
     private final MqProducer mqProducer;
 
+    /**
+     * 发送相关逻辑。
+     */
     public void send(Long userId, String action, String targetType, String targetId, String remark) {
         OperationLogMessage message = new OperationLogMessage();
         message.setMessageId(UUID.randomUUID().toString());

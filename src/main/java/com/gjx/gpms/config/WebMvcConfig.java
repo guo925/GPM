@@ -16,6 +16,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final FileStorageProperties fileStorageProperties;
 
+    /**
+     * 新增resource handlers相关逻辑。
+     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String prefix = normalizePrefix(fileStorageProperties.getLocalUrlPrefix());
@@ -23,6 +26,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addResourceHandler(prefix + "/**").addResourceLocations(location.endsWith("/") ? location : location + "/");
     }
 
+    /**
+     * 处理normalizePrefix相关逻辑。
+     */
     private String normalizePrefix(String prefix) {
         if (prefix == null || prefix.isBlank()) {
             return "/uploads";

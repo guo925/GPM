@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.time.Duration;
 
+/**
+ * Statistics 控制器。
+ */
 @Tag(name = "数据统计")
 @RestController
 @RequestMapping("/api/statistics")
@@ -23,6 +26,9 @@ public class StatisticsController {
     private final JdbcTemplate jdbcTemplate;
     private final RedisCacheService redisCacheService;
 
+    /**
+     * 获取总览统计数据
+     */
     @Operation(summary = "获取总览统计数据")
     @GetMapping("/overview")
     @PreAuthorize("hasAuthority('batch:page')")
@@ -37,6 +43,9 @@ public class StatisticsController {
         return Result.success(cached);
     }
 
+    /**
+     * 构建overview相关逻辑。
+     */
     private StatisticsVO buildOverview() {
         StatisticsVO vo = new StatisticsVO();
 
@@ -103,6 +112,9 @@ public class StatisticsController {
         return vo;
     }
 
+    /**
+     * 统计相关逻辑。
+     */
     private Integer count(String table) {
         try {
             return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class);
@@ -111,6 +123,9 @@ public class StatisticsController {
         }
     }
 
+    /**
+     * 处理queryInt相关逻辑。
+     */
     private Integer queryInt(String sql) {
         try {
             return jdbcTemplate.queryForObject(sql, Integer.class);

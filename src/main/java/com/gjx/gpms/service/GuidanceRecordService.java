@@ -14,9 +14,18 @@ import java.util.List;
  */
 public interface GuidanceRecordService extends IService<GuidanceRecord> {
 
+    /**
+     * 创建相关逻辑。
+     */
     void create(GuidanceRecordCreateDTO dto);
 
+    /**
+     * 审核相关逻辑。
+     */
     void review(Long id, String comment);
 
+    /**
+     * 获取ByStudentTopic。
+     */
     List<GuidanceRecordVO> getByStudentTopic(Long studentTopicId);
 }

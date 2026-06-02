@@ -12,5 +12,6 @@ export const uploadFile = (file, bizType = 'common') => {
 
 export const getFileViewUrl = (path) => {
   if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
   return `/api/file/view?path=${encodeURIComponent(path)}`
 }

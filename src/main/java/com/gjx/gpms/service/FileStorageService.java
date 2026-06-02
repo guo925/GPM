@@ -8,5 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public interface FileStorageService {
 
+    /**
+     * 上传相关逻辑。
+     */
     FileUploadVO upload(MultipartFile file, String bizType);
 }

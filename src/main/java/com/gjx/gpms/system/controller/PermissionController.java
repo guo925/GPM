@@ -28,6 +28,9 @@ public class PermissionController {
 
     private final PermissionService permissionService;
 
+    /**
+     * 权限列表
+     */
     @Operation(summary = "权限列表")
     @PreAuthorize("hasAuthority('system:permission:list')")
     @GetMapping("/list")
@@ -35,6 +38,9 @@ public class PermissionController {
         return Result.success(permissionService.listAll());
     }
 
+    /**
+     * 权限树
+     */
     @Operation(summary = "权限树")
     @PreAuthorize("hasAuthority('system:permission:list')")
     @GetMapping("/tree")
@@ -42,6 +48,9 @@ public class PermissionController {
         return Result.success(permissionService.tree());
     }
 
+    /**
+     * 新增权限
+     */
     @Operation(summary = "新增权限")
     @PreAuthorize("hasAuthority('system:permission:add')")
     @PostMapping("/create")
@@ -50,6 +59,9 @@ public class PermissionController {
         return Result.success();
     }
 
+    /**
+     * 修改权限
+     */
     @Operation(summary = "修改权限")
     @PreAuthorize("hasAuthority('system:permission:update')")
     @PutMapping("/update")
@@ -58,6 +70,9 @@ public class PermissionController {
         return Result.success();
     }
 
+    /**
+     * 删除权限
+     */
     @Operation(summary = "删除权限")
     @PreAuthorize("hasAuthority('system:permission:delete')")
     @DeleteMapping("/{id}")

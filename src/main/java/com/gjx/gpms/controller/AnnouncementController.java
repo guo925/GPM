@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * Announcement 控制器。
+ */
 @Tag(name = "公告管理")
 @RestController
 @RequestMapping("/api/announcement")
@@ -49,6 +52,9 @@ public class AnnouncementController {
         return Result.success(notificationMapper.selectPage(page, wrapper));
     }
 
+    /**
+     * 发布公告
+     */
     @Operation(summary = "发布公告")
     @PreAuthorize("hasAuthority('announcement:add')")
     @PostMapping
@@ -64,6 +70,9 @@ public class AnnouncementController {
         return Result.success();
     }
 
+    /**
+     * 修改公告
+     */
     @Operation(summary = "修改公告")
     @PreAuthorize("hasAuthority('announcement:update')")
     @PutMapping("/{id}")
@@ -75,6 +84,9 @@ public class AnnouncementController {
         return Result.success();
     }
 
+    /**
+     * 删除公告
+     */
     @Operation(summary = "删除公告")
     @PreAuthorize("hasAuthority('announcement:delete')")
     @DeleteMapping("/{id}")
@@ -85,6 +97,9 @@ public class AnnouncementController {
         return Result.success();
     }
 
+    /**
+     * 获取Announcement。
+     */
     private Notification getAnnouncement(Long id) {
         Notification notification = notificationMapper.selectById(id);
         if (notification == null
