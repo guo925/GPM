@@ -8,5 +8,6 @@ export const createDefenseGroup = (data) => api.post('/defense/group/create', da
 export const deleteDefenseGroup = (id) => api.delete(`/defense/group/${id}`)
 export const getDefenseArrangements = (groupId) => api.get('/defense/arrangements', { params: { groupId } })
 export const addDefenseArrangement = (data) => api.post('/defense/arrange', data)
+export const deleteDefenseArrangement = (id) => api.delete(`/defense/arrange/${id}`)
 export const saveDefenseResult = (data) => api.post('/defense/result', data)
 export const getDefenseResult = (arrangementId) => api.get(`/defense/result/${arrangementId}`)

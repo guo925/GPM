@@ -117,6 +117,66 @@ const router = createRouter({
           meta: { title: '课题管理' }
         },
         {
+          path: 'thesis/task-book',
+          name: 'TaskBookWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '任务书', workflowType: 'taskBook', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'thesis/opening-report',
+          name: 'OpeningReportWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '开题报告', workflowType: 'openingReport', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'thesis/opening-defense',
+          name: 'OpeningDefenseWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '开题答辩', workflowType: 'openingDefense', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'thesis/opening-minutes',
+          name: 'OpeningMinutesWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '开题报告会议纪要', workflowType: 'openingMinutes', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'thesis/weekly-log',
+          name: 'WeeklyLogWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '指导记录周记', workflowType: 'weeklyLog', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'thesis/midterm',
+          name: 'MidtermWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '中期检查', workflowType: 'midterm', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'thesis/guidance',
+          name: 'ThesisGuidanceWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '论文指导', workflowType: 'thesisGuidance', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'thesis/post-defense-revision',
+          name: 'PostDefenseRevisionWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '答辩后论文修改审核', workflowType: 'postDefenseRevision', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'thesis/final-thesis',
+          name: 'FinalThesisWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '查看论文终稿', workflowType: 'finalThesis', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'thesis/final-design',
+          name: 'FinalDesignWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '查看设计终稿', workflowType: 'finalDesign', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
           path: 'statistics',
           name: 'Statistics',
           component: () => import('@/views/Statistics.vue'),
@@ -151,6 +211,66 @@ const router = createRouter({
           name: 'DefenseManage',
           component: () => import('@/views/defense/DefenseManage.vue'),
           meta: { title: '答辩管理', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'score/defense-groups',
+          name: 'ScoreDefenseGroups',
+          component: () => import('@/views/defense/DefenseManage.vue'),
+          meta: { title: '答辩组信息', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'score/advisor',
+          name: 'AdvisorScoreWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '指导导师评分', workflowType: 'advisorScore', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'score/reviewer',
+          name: 'ReviewerScoreWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '评阅导师评分', workflowType: 'reviewerScore', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'score/deputy-review',
+          name: 'DeputyReviewWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '论文副院长审核', workflowType: 'deputyReview', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN'] }
+        },
+        {
+          path: 'score/history',
+          name: 'ScoreHistoryWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '历史评分', workflowType: 'scoreHistory', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'special/title-change',
+          name: 'TitleChangeWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '论文修改题目审核', workflowType: 'titleChange', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'special/extension',
+          name: 'ExtensionWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '申请延期', workflowType: 'extension', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER', 'STUDENT'] }
+        },
+        {
+          path: 'special/advisor-score',
+          name: 'SpecialAdvisorScoreWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '指导老师评分', workflowType: 'specialAdvisorScore', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'special/attachment-review',
+          name: 'AttachmentReviewWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '附件修改审核', workflowType: 'attachmentReview', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
+        },
+        {
+          path: 'special/completion-edit-review',
+          name: 'CompletionEditReviewWorkflow',
+          component: () => import('@/views/workflow/WorkflowPage.vue'),
+          meta: { title: '流程完成后修改审核', workflowType: 'completionEditReview', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
         },
         {
           path: 'archive',

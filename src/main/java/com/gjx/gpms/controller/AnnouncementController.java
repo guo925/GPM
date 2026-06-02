@@ -29,6 +29,8 @@ public class AnnouncementController {
 
     private static final Long PUBLIC_RECIPIENT_ID = 0L;
     private static final String ANNOUNCEMENT_TYPE = "announcement";
+    private static final String ANNOUNCEMENT_READ_ROLES =
+            "hasAnyRole('SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER','STUDENT')";
 
     private final NotificationMapper notificationMapper;
     private final JdbcTemplate jdbcTemplate;
@@ -48,6 +50,18 @@ public class AnnouncementController {
                 .like(Notification::getTitle, keyword)
                 .or()
                 .like(Notification::getContent, keyword));
+        wrapper.orderByDesc(Notification::getCreatedAt);
+        return Result.success(notificationMapper.selectPage(page, wrapper));
+    }
+
+    @Operation(summary = "最新公告")
+    @PreAuthorize(ANNOUNCEMENT_READ_ROLES)
+    @GetMapping("/latest")
+    public Result<IPage<Notification>> latest(@RequestParam(defaultValue = "5") long size) {
+        Page<Notification> page = new Page<>(1, size);
+        LambdaQueryWrapper<Notification> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Notification::getType, ANNOUNCEMENT_TYPE);
+        wrapper.eq(Notification::getRecipientId, PUBLIC_RECIPIENT_ID);
         wrapper.orderByDesc(Notification::getCreatedAt);
         return Result.success(notificationMapper.selectPage(page, wrapper));
     }

@@ -46,6 +46,23 @@
           <span>课题管理</span>
         </el-menu-item>
 
+        <el-sub-menu v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER','STUDENT'])" index="thesis">
+          <template #title>
+            <el-icon><DocumentChecked /></el-icon>
+            <span>论文管理</span>
+          </template>
+          <el-menu-item index="/thesis/task-book">任务书</el-menu-item>
+          <el-menu-item index="/thesis/opening-report">开题报告</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/thesis/opening-defense">开题答辩</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/thesis/opening-minutes">开题报告会议纪要</el-menu-item>
+          <el-menu-item index="/thesis/weekly-log">指导记录周记</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/thesis/midterm">中期检查</el-menu-item>
+          <el-menu-item index="/thesis/guidance">论文指导</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/thesis/post-defense-revision">答辩后论文修改审核</el-menu-item>
+          <el-menu-item index="/thesis/final-thesis">查看论文终稿</el-menu-item>
+          <el-menu-item index="/thesis/final-design">查看设计终稿</el-menu-item>
+        </el-sub-menu>
+
         <!-- 数据统计：管理员可见 -->
         <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN'])" index="/statistics">
           <el-icon><DataAnalysis /></el-icon>
@@ -82,6 +99,18 @@
           <span>答辩管理</span>
         </el-menu-item>
 
+        <el-sub-menu v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="score-evaluation">
+          <template #title>
+            <el-icon><Tickets /></el-icon>
+            <span>成绩评定</span>
+          </template>
+          <el-menu-item index="/score/defense-groups">答辩组信息</el-menu-item>
+          <el-menu-item index="/score/advisor">指导导师评分</el-menu-item>
+          <el-menu-item index="/score/reviewer">评阅导师评分</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN'])" index="/score/deputy-review">论文副院长审核</el-menu-item>
+          <el-menu-item index="/score/history">历史评分</el-menu-item>
+        </el-sub-menu>
+
         <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN'])" index="/archive">
           <el-icon><FolderChecked /></el-icon>
           <span>归档管理</span>
@@ -97,6 +126,18 @@
           <el-icon><Monitor /></el-icon>
           <span>专业管理</span>
         </el-menu-item>
+
+        <el-sub-menu v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER','STUDENT'])" index="special">
+          <template #title>
+            <el-icon><Tickets /></el-icon>
+            <span>特殊情况处理</span>
+          </template>
+          <el-menu-item index="/special/title-change">论文修改题目审核</el-menu-item>
+          <el-menu-item index="/special/extension">申请延期</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/special/advisor-score">指导老师评分</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/special/attachment-review">附件修改审核</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/special/completion-edit-review">流程完成后修改审核</el-menu-item>
+        </el-sub-menu>
 
         <!-- 学生专区：仅学生可见 -->
         <el-sub-menu index="student-area" v-if="checkRole(['STUDENT'])">
@@ -179,13 +220,17 @@ const handleLogout = async () => {
 
 <style scoped>
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   background: var(--gp-bg);
+  overflow: hidden;
 }
 
 .app-aside {
   background: var(--gp-sidebar);
   border-right: 1px solid rgba(255, 255, 255, .08);
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .brand {
@@ -278,8 +323,10 @@ const handleLogout = async () => {
 }
 
 .app-main {
-  min-height: calc(100vh - 64px);
+  height: calc(100vh - 64px);
   padding: 22px;
   background: var(--gp-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 </style>

@@ -133,6 +133,7 @@ import { getTopicPage, createTopic, updateTopic, deleteTopic, reviewTopic } from
 import { getBatchPage } from '@/api/batch'
 import { submitPreferences, getMySelections } from '@/api/selection'
 import { useAuthStore, hasAnyRole } from '@/stores/auth'
+import { getSelectedBatchId, setSelectedBatchId } from '@/utils/batchContext'
 
 const authStore = useAuthStore()
 const isStudent = computed(() => authStore.roles.includes('STUDENT'))
@@ -149,7 +150,7 @@ const selectedIds = ref([])
 const submittedIds = ref([])
 const submitting = ref(false)
 const tableRef = ref(null)
-const query = ref({ current: 1, size: 10, batchId: null, status: null })
+const query = ref({ current: 1, size: 10, batchId: getSelectedBatchId(), status: null })
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
@@ -227,6 +228,7 @@ const loadBatches = async () => {
 }
 
 const loadData = async () => {
+  setSelectedBatchId(query.value.batchId)
   loading.value = true
   try {
     const res = await getTopicPage(query.value)

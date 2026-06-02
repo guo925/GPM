@@ -18,6 +18,7 @@ export default defineConfig({
   server: {
     // 前端端口
     port: 9090,
+    strictPort: true,
 
     proxy: {
       '/api': {

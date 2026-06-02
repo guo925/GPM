@@ -1,6 +1,7 @@
 package com.gjx.gpms.controller;
 
 import com.gjx.gpms.common.result.Result;
+import com.gjx.gpms.dto.DefenseArrangementDTO;
 import com.gjx.gpms.dto.DefenseBatchDTO;
 import com.gjx.gpms.dto.DefenseGroupDTO;
 import com.gjx.gpms.dto.DefenseResultDTO;
@@ -17,7 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Defense 控制器。
@@ -110,13 +110,19 @@ public class DefenseController {
     @Operation(summary = "添加答辩安排")
     @PreAuthorize("hasAuthority('defense:arrange') or " + DEFENSE_MANAGE_ROLES)
     @PostMapping("/arrange")
-    public Result<Void> addArrangement(@RequestBody Map<String, Object> params) {
-        defenseService.addArrangement(
-                Long.valueOf(params.get("groupId").toString()),
-                Long.valueOf(params.get("studentId").toString()),
-                (String) params.get("defenseTime"),
-                (String) params.get("location")
-        );
+    public Result<Void> addArrangement(@Valid @RequestBody DefenseArrangementDTO dto) {
+        defenseService.addArrangement(dto);
+        return Result.success();
+    }
+
+    /**
+     * 删除答辩安排
+     */
+    @Operation(summary = "删除答辩安排")
+    @PreAuthorize("hasAuthority('defense:arrange') or " + DEFENSE_MANAGE_ROLES)
+    @DeleteMapping("/arrange/{id}")
+    public Result<Void> deleteArrangement(@PathVariable Long id) {
+        defenseService.deleteArrangement(id);
         return Result.success();
     }
 

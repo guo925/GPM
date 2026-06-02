@@ -27,6 +27,8 @@ public class DataInitializer {
             try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN college_id BIGINT COMMENT '所属学院ID'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN major_id BIGINT COMMENT '所属专业ID'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE sys_permission ADD COLUMN group_name VARCHAR(50) COMMENT '权限分组'"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE workflow_item ADD COLUMN batch_id BIGINT COMMENT '所属批次ID' AFTER id"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("CREATE INDEX idx_workflow_batch ON workflow_item (batch_id)"); } catch (Exception ignored) {}
 
             // 自动创建缺失的业务表
             String[] tables = {
@@ -47,7 +49,8 @@ public class DataInitializer {
                 "CREATE TABLE IF NOT EXISTS score_detail (id BIGINT AUTO_INCREMENT PRIMARY KEY,sheet_id BIGINT NOT NULL,type VARCHAR(20),score DECIMAL(5,2),weight DECIMAL(4,2),comment VARCHAR(500),reviewer_id BIGINT,is_blind TINYINT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS notification (id BIGINT AUTO_INCREMENT PRIMARY KEY,recipient_id BIGINT NOT NULL,title VARCHAR(200) NOT NULL,content TEXT,type VARCHAR(30),is_read TINYINT DEFAULT 0,read_at DATETIME,created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS operation_log (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id BIGINT,action VARCHAR(50),target_type VARCHAR(50),target_id BIGINT,old_value TEXT,new_value TEXT,ip_address VARCHAR(50),user_agent VARCHAR(500),remark VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
-                "CREATE TABLE IF NOT EXISTS audit_log (id BIGINT AUTO_INCREMENT PRIMARY KEY,process_instance_id BIGINT,target_type VARCHAR(50),target_id BIGINT,auditor_id BIGINT,action VARCHAR(30),comment VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+                "CREATE TABLE IF NOT EXISTS audit_log (id BIGINT AUTO_INCREMENT PRIMARY KEY,process_instance_id BIGINT,target_type VARCHAR(50),target_id BIGINT,auditor_id BIGINT,action VARCHAR(30),comment VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
+                "CREATE TABLE IF NOT EXISTS workflow_item (id BIGINT AUTO_INCREMENT PRIMARY KEY,batch_id BIGINT COMMENT '所属批次ID',workflow_type VARCHAR(80) NOT NULL,student_name VARCHAR(50) NOT NULL,student_no VARCHAR(50) NOT NULL,advisor_name VARCHAR(50),title VARCHAR(255) NOT NULL,extra TEXT,remark TEXT,status VARCHAR(30) DEFAULT 'pending',score DECIMAL(5,2),comment TEXT,created_by BIGINT,updated_by BIGINT,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_workflow_batch (batch_id),INDEX idx_workflow_type (workflow_type),INDEX idx_workflow_status (status))"
             };
             for (String sql : tables) {
                 try { jdbcTemplate.execute(sql); } catch (Exception ignored) {}
@@ -69,6 +72,7 @@ public class DataInitializer {
 
             // 种子：角色
             try { jdbcTemplate.execute("INSERT IGNORE INTO sys_role (id, role_name, role_code, status) VALUES (1, '超级管理员', 'SUPER_ADMIN', 1),(2, '校级管理员', 'UNIVERSITY_ADMIN', 1),(3, '院级管理员', 'COLLEGE_ADMIN', 1),(4, '年级管理员', 'GRADE_ADMIN', 1),(5, '专业管理员', 'MAJOR_ADMIN', 1),(6, '教师', 'TEACHER', 1),(7, '学生', 'STUDENT', 1)"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("UPDATE workflow_item SET batch_id = (SELECT id FROM batch ORDER BY status DESC, created_at DESC LIMIT 1) WHERE batch_id IS NULL"); } catch (Exception ignored) {}
 
             // 清理非种子用户
             try { jdbcTemplate.execute("DELETE FROM sys_user_role WHERE user_id IN (SELECT id FROM sys_user WHERE username NOT IN ('admin','u_admin','c_admin','g_admin','m_admin','teacher1','student1'))"); } catch (Exception ignored) {}

@@ -7,12 +7,14 @@
       </div>
     </div>
 
+    <WorkbenchOverview />
+
     <div class="action-grid">
       <div v-for="item in actions" :key="item.path" class="action-card">
         <div class="action-card__icon"><el-icon><component :is="item.icon" /></el-icon></div>
         <h2 class="action-card__title">{{ item.title }}</h2>
         <p class="action-card__meta">{{ item.desc }}</p>
-        <el-button type="primary" @click="router.push(item.path)">进入</el-button>
+        <el-button type="primary" @click="router.push(withSelectedBatchQuery(item.path))">进入</el-button>
       </div>
     </div>
   </div>
@@ -21,6 +23,8 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { Tickets, Collection, UserFilled, Monitor, DataLine, OfficeBuilding } from '@element-plus/icons-vue'
+import WorkbenchOverview from '@/views/components/WorkbenchOverview.vue'
+import { withSelectedBatchQuery } from '@/utils/batchContext'
 
 const router = useRouter()
 const actions = [

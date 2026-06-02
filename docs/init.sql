@@ -166,6 +166,29 @@ CREATE TABLE IF NOT EXISTS guidance_record (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) COMMENT '指导记录';
 
+-- 13-1. 通用流程事项表（论文管理、成绩评定、特殊情况处理）
+CREATE TABLE IF NOT EXISTS workflow_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    batch_id BIGINT COMMENT '所属批次ID',
+    workflow_type VARCHAR(80) NOT NULL COMMENT '功能类型',
+    student_name VARCHAR(50) NOT NULL COMMENT '学生姓名',
+    student_no VARCHAR(50) NOT NULL COMMENT '学号',
+    advisor_name VARCHAR(50) COMMENT '指导教师',
+    title VARCHAR(255) NOT NULL COMMENT '论文或事项标题',
+    extra TEXT COMMENT '扩展信息',
+    remark TEXT COMMENT '说明',
+    status VARCHAR(30) DEFAULT 'pending' COMMENT 'pending/approved/rejected/draft',
+    score DECIMAL(5,2) COMMENT '分数',
+    comment TEXT COMMENT '审核或评分意见',
+    created_by BIGINT COMMENT '创建人',
+    updated_by BIGINT COMMENT '更新人',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_workflow_batch (batch_id),
+    INDEX idx_workflow_type (workflow_type),
+    INDEX idx_workflow_status (status)
+) COMMENT '通用流程事项';
+
 -- 14. 答辩批次表
 CREATE TABLE IF NOT EXISTS defense_batch (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

@@ -1,6 +1,7 @@
 package com.gjx.gpms.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.gjx.gpms.dto.DefenseArrangementDTO;
 import com.gjx.gpms.dto.DefenseBatchDTO;
 import com.gjx.gpms.dto.DefenseGroupDTO;
 import com.gjx.gpms.dto.DefenseResultDTO;
@@ -49,7 +50,11 @@ public interface DefenseService {
     /**
      * 新增arrangement相关逻辑。
      */
-    void addArrangement(Long groupId, Long studentId, String defenseTime, String location);
+    void addArrangement(DefenseArrangementDTO dto);
+    /**
+     * 删除arrangement相关逻辑。
+     */
+    void deleteArrangement(Long id);
 
     // 答辩结果
     /**

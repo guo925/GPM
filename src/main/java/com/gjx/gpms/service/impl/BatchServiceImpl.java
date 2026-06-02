@@ -67,6 +67,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         voPage.setRecords(batchPage.getRecords().stream().map(b -> {
             BatchVO vo = new BatchVO();
             BeanUtils.copyProperties(b, vo);
+            fillByteFields(b, vo);
             vo.setCollegeName(collegeMap.getOrDefault(b.getCollegeId(), ""));
             vo.setMajorName(majorMap.getOrDefault(b.getMajorId(), ""));
             vo.setCurrentStage(b.getCurrentStage());
@@ -91,6 +92,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
 
         BatchVO vo = new BatchVO();
         BeanUtils.copyProperties(b, vo);
+        fillByteFields(b, vo);
         vo.setCollegeName(college != null ? college.getName() : "");
         vo.setMajorName(major != null ? major.getName() : "");
         return vo;
@@ -192,5 +194,11 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         this.updateById(entity);
         redisCacheService.delete(CacheKeys.BATCH_CURRENT);
         log.info("批次[{}]阶段推进至：{}", id, nextStage);
+    }
+
+    private void fillByteFields(Batch batch, BatchVO vo) {
+        vo.setStudentMaxChoices(batch.getStudentMaxChoices() == null ? null : batch.getStudentMaxChoices().intValue());
+        vo.setAllowTeacherReject(batch.getAllowTeacherReject() == null ? null : batch.getAllowTeacherReject().intValue());
+        vo.setStatus(batch.getStatus() == null ? null : batch.getStatus().intValue());
     }
 }
