@@ -35,8 +35,9 @@ public class TopicController {
             @RequestParam(defaultValue = "1") long current,
             @RequestParam(defaultValue = "10") long size,
             @RequestParam(required = false) Long batchId,
+            @RequestParam(required = false) String grade,
             @RequestParam(required = false) String status) {
-        return Result.success(topicService.page(current, size, batchId, status));
+        return Result.success(topicService.page(current, size, batchId, grade, status));
     }
 
     /**

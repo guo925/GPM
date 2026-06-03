@@ -15,9 +15,9 @@
     <el-card class="table-card">
       <div class="toolbar-form">
         <el-form :inline="true" :model="query">
-          <el-form-item label="批次">
-            <el-select v-model="query.batchId" placeholder="全部批次" clearable style="width:240px" @change="loadData">
-              <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
+          <el-form-item label="年级">
+            <el-select v-model="query.grade" placeholder="全部年级" clearable style="width:240px" @change="loadData">
+              <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
@@ -44,9 +44,15 @@
         <el-table-column prop="batchName" label="批次" />
         <el-table-column prop="title" label="题目名称" />
         <el-table-column prop="creatorName" label="出题人" />
+        <el-table-column label="附件" width="90">
+          <template #default="{ row }">
+            <el-link v-if="row.filePath" type="primary" :href="getFileViewUrl(row.filePath)" target="_blank">查看</el-link>
+            <span v-else class="muted-text">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="source" label="来源" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.source === 'preset' ? '' : 'warning'">
+            <el-tag :type="row.source === 'preset' ? 'info' : 'warning'">
               {{ row.source === 'preset' ? '预设' : '自拟' }}
             </el-tag>
           </template>
@@ -116,6 +122,22 @@
         <el-form-item label="可容纳学生数">
           <el-input-number v-model="form.maxCapacity" :min="1" :max="10" />
         </el-form-item>
+        <el-form-item label="课题附件">
+          <div class="attachment-row">
+            <el-upload
+              :show-file-list="false"
+              :http-request="uploadTopicFile"
+              :before-upload="beforeUpload"
+            >
+              <el-button :loading="uploading">
+                <el-icon><Upload /></el-icon>上传附件
+              </el-button>
+            </el-upload>
+            <el-link v-if="form.filePath" type="primary" :href="getFileViewUrl(form.filePath)" target="_blank">
+              查看附件
+            </el-link>
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -128,34 +150,37 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Upload } from '@element-plus/icons-vue'
 import { getTopicPage, createTopic, updateTopic, deleteTopic, reviewTopic } from '@/api/topic'
-import { getBatchPage } from '@/api/batch'
+import { getBatchPage, getDistinctGrades } from '@/api/batch'
 import { submitPreferences, getMySelections } from '@/api/selection'
 import { useAuthStore, hasAnyRole } from '@/stores/auth'
-import { getSelectedBatchId, setSelectedBatchId } from '@/utils/batchContext'
+import { getSelectedGrade, setSelectedGrade } from '@/utils/batchContext'
+import { getFileViewUrl, uploadFile } from '@/api/file'
 
 const authStore = useAuthStore()
 const isStudent = computed(() => authStore.roles.includes('STUDENT'))
 const canCreateTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'TEACHER']))
 const canEditTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'TEACHER']))
-const canDeleteTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'TEACHER']))
+const canDeleteTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN']))
 const canReviewTopic = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN']))
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const batches = ref([])
+const grades = ref([])
 const selectedIds = ref([])
 const submittedIds = ref([])
 const submitting = ref(false)
+const uploading = ref(false)
 const tableRef = ref(null)
-const query = ref({ current: 1, size: 10, batchId: getSelectedBatchId(), status: null })
+const query = ref({ current: 1, size: 10, grade: getSelectedGrade(), status: null })
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
 const editId = ref(null)
-const form = ref({ batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1 })
+const form = ref({ batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' })
 const rules = {
   batchId: [{ required: true, message: '请选择批次', trigger: 'change' }],
   title: [{ required: true, message: '请输入题目名称', trigger: 'blur' }],
@@ -172,8 +197,8 @@ const onSelectionChange = (rows) => {
 }
 
 const selectSingle = async (row) => {
-  if (!query.value.batchId) {
-    ElMessage.warning('请先筛选批次')
+  if (!query.value.grade) {
+    ElMessage.warning('请先筛选年级')
     return
   }
   if (submittedIds.value.length >= 3) {
@@ -182,17 +207,17 @@ const selectSingle = async (row) => {
   }
   try {
     const newIds = [...submittedIds.value, row.id]
-    await submitPreferences({ batchId: query.value.batchId, topicIds: newIds })
+    await submitPreferences({ batchId: row.batchId, topicIds: newIds })
     ElMessage.success('已选择：' + row.title)
     await loadSubmittedTopics()
-  } catch {
-    ElMessage.error('操作失败')
+  } catch (error) {
+    ElMessage.error(error.message || '操作失败')
   }
 }
 
 const submitSelections = async () => {
-  if (!query.value.batchId) {
-    ElMessage.warning('请先选择批次')
+  if (!query.value.grade) {
+    ElMessage.warning('请先选择年级')
     return
   }
   if (selectedIds.value.length === 0) {
@@ -201,22 +226,23 @@ const submitSelections = async () => {
   }
   submitting.value = true
   try {
-    await submitPreferences({ batchId: query.value.batchId, topicIds: selectedIds.value })
+    const firstSelected = tableData.value.find(r => selectedIds.value.includes(r.id))
+    await submitPreferences({ batchId: firstSelected?.batchId, topicIds: selectedIds.value })
     ElMessage.success('志愿提交成功')
     selectedIds.value = []
     tableRef.value?.clearSelection()
     await loadSubmittedTopics()
-  } catch {
-    ElMessage.error('提交失败，请前往「我的选题」查看已提交志愿')
+  } catch (error) {
+    ElMessage.error(error.message || '提交失败，请前往「我的选题」查看已提交志愿')
   } finally {
     submitting.value = false
   }
 }
 
 const loadSubmittedTopics = async () => {
-  if (!isStudent.value || !query.value.batchId) return
+  if (!isStudent.value || !query.value.grade) return
   try {
-    const res = await getMySelections(query.value.batchId)
+    const res = await getMySelections(query.value.grade)
     const list = res.data || []
     submittedIds.value = list.map(r => r.topicId)
   } catch { submittedIds.value = [] }
@@ -227,8 +253,13 @@ const loadBatches = async () => {
   batches.value = res.data.records
 }
 
+const loadGrades = async () => {
+  const res = await getDistinctGrades()
+  grades.value = res.data || []
+}
+
 const loadData = async () => {
-  setSelectedBatchId(query.value.batchId)
+  setSelectedGrade(query.value.grade)
   loading.value = true
   try {
     const res = await getTopicPage(query.value)
@@ -246,7 +277,7 @@ const handleAdd = () => {
   if (!canCreateTopic.value) return
   isEdit.value = false
   editId.value = null
-  form.value = { batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1 }
+  form.value = { batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' }
   dialogVisible.value = true
 }
 
@@ -254,8 +285,28 @@ const handleEdit = (row) => {
   if (!canEditTopic.value) return
   isEdit.value = true
   editId.value = row.id
-  form.value = { batchId: row.batchId, title: row.title, description: row.description, source: row.source, maxCapacity: row.maxCapacity }
+  form.value = { batchId: row.batchId, title: row.title, description: row.description, source: row.source, maxCapacity: row.maxCapacity, filePath: row.filePath || '' }
   dialogVisible.value = true
+}
+
+const beforeUpload = (file) => {
+  const maxSize = 50 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.warning('文件大小不能超过50MB')
+    return false
+  }
+  return true
+}
+
+const uploadTopicFile = async ({ file }) => {
+  uploading.value = true
+  try {
+    const res = await uploadFile(file, 'topic')
+    form.value.filePath = res.data.url
+    ElMessage.success('上传成功')
+  } finally {
+    uploading.value = false
+  }
 }
 
 const handleReview = async (row, status) => {
@@ -287,7 +338,20 @@ const handleSubmit = async () => {
 }
 
 onMounted(async () => {
+  await loadGrades()
   await loadBatches()
   loadData()
 })
 </script>
+
+<style scoped>
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.muted-text {
+  color: #909399;
+}
+</style>

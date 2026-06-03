@@ -10,8 +10,8 @@
 
     <el-card class="work-card">
       <el-form inline class="filter-form">
-        <el-form-item label="批次ID">
-          <el-input v-model="batchId" placeholder="指定批次ID" style="width:160px" />
+        <el-form-item label="年级">
+          <el-input v-model="grade" placeholder="指定年级" style="width:160px" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="archiveOne">归档指定批次</el-button>
@@ -39,7 +39,7 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { archiveBatch, archiveHistoryBatches, getArchiveLogs } from '@/api/archive'
 
-const batchId = ref('')
+const grade = ref('')
 const logs = ref([])
 
 const fetchLogs = async () => {
@@ -48,12 +48,12 @@ const fetchLogs = async () => {
 }
 
 const archiveOne = async () => {
-  if (!batchId.value) {
-    ElMessage.warning('请输入批次ID')
+  if (!grade.value) {
+    ElMessage.warning('请输入年级')
     return
   }
-  await ElMessageBox.confirm(`确认归档批次 ${batchId.value}？`, '归档确认', { type: 'warning' })
-  await archiveBatch(batchId.value)
+  await ElMessageBox.confirm(`确认归档年级 ${grade.value}？`, '归档确认', { type: 'warning' })
+  await archiveBatch(grade.value)
   ElMessage.success('归档完成')
   await fetchLogs()
 }

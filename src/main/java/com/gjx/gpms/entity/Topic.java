@@ -79,6 +79,12 @@ public class Topic implements Serializable {
     
     private String reviewComment;
 
+    /**
+     * 课题附件路径
+     */
+    
+    private String filePath;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

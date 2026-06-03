@@ -3,6 +3,7 @@ package com.gjx.gpms.controller;
 import com.gjx.gpms.common.result.Result;
 import com.gjx.gpms.dto.SelectionSubmitDTO;
 import com.gjx.gpms.dto.TeacherReviewDTO;
+import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.SelectionRecordService;
 import com.gjx.gpms.vo.SelectionRecordVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +27,7 @@ import java.util.List;
 public class SelectionRecordController {
 
     private final SelectionRecordService selectionRecordService;
+    private final BatchService batchService;
 
     /**
      * 提交选题志愿
@@ -44,8 +46,9 @@ public class SelectionRecordController {
     @Operation(summary = "我的志愿")
     @PreAuthorize("hasAuthority('selection:my')")
     @GetMapping("/my")
-    public Result<List<SelectionRecordVO>> getMySelections(@RequestParam(required = false) Long batchId) {
-        return Result.success(selectionRecordService.getMySelections(batchId));
+    public Result<List<SelectionRecordVO>> getMySelections(@RequestParam(required = false) Long batchId,
+                                                            @RequestParam(required = false) String grade) {
+        return Result.success(selectionRecordService.getMySelections(batchId, grade));
     }
 
     /**
@@ -54,8 +57,9 @@ public class SelectionRecordController {
     @Operation(summary = "教师审核列表")
     @PreAuthorize("hasAuthority('selection:review')")
     @GetMapping("/review-list")
-    public Result<List<SelectionRecordVO>> getTeacherReviewList(@RequestParam(required = false) Long batchId) {
-        return Result.success(selectionRecordService.getTeacherReviewList(batchId));
+    public Result<List<SelectionRecordVO>> getTeacherReviewList(@RequestParam(required = false) Long batchId,
+                                                                 @RequestParam(required = false) String grade) {
+        return Result.success(selectionRecordService.getTeacherReviewList(batchId, grade));
     }
 
     /**
@@ -75,7 +79,14 @@ public class SelectionRecordController {
     @Operation(summary = "系统自动分配")
     @PreAuthorize("hasAuthority('selection:allocate')")
     @PostMapping("/auto-allocate/{batchId}")
-    public Result<Void> autoAllocate(@PathVariable Long batchId) {
+    public Result<Void> autoAllocate(@PathVariable Long batchId,
+                                     @RequestParam(required = false) String grade) {
+        if ((batchId == null || batchId == 0) && grade != null && !grade.isBlank()) {
+            for (Long id : batchService.resolveBatchIdsByGrade(grade)) {
+                selectionRecordService.autoAllocate(id);
+            }
+            return Result.success();
+        }
         selectionRecordService.autoAllocate(batchId);
         return Result.success();
     }

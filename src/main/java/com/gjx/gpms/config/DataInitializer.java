@@ -28,6 +28,9 @@ public class DataInitializer {
             try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN major_id BIGINT COMMENT '所属专业ID'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE sys_permission ADD COLUMN group_name VARCHAR(50) COMMENT '权限分组'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE workflow_item ADD COLUMN batch_id BIGINT COMMENT '所属批次ID' AFTER id"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE topic ADD COLUMN file_path VARCHAR(500) COMMENT '课题附件路径'"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE topic_current ADD COLUMN file_path VARCHAR(500) COMMENT '课题附件路径'"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE topic_history ADD COLUMN file_path VARCHAR(500) COMMENT '课题附件路径'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("CREATE INDEX idx_workflow_batch ON workflow_item (batch_id)"); } catch (Exception ignored) {}
 
             // 自动创建缺失的业务表
@@ -35,7 +38,7 @@ public class DataInitializer {
                 "CREATE TABLE IF NOT EXISTS college (id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(100) NOT NULL,code VARCHAR(50) NOT NULL UNIQUE,sort_order INT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS major (id BIGINT AUTO_INCREMENT PRIMARY KEY,college_id BIGINT NOT NULL,name VARCHAR(100) NOT NULL,code VARCHAR(50) NOT NULL UNIQUE,sort_order INT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS batch (id BIGINT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(200) NOT NULL,grade VARCHAR(20) NOT NULL,college_id BIGINT NOT NULL,major_id BIGINT NOT NULL,current_stage VARCHAR(50) DEFAULT 'topic_selection',config TEXT,max_student_per_teacher INT DEFAULT 5,selection_mode VARCHAR(30) DEFAULT 'voluntary',student_max_choices INT DEFAULT 3,allow_teacher_reject INT DEFAULT 1,reject_strategy VARCHAR(30) DEFAULT 'pool',status INT DEFAULT 1,created_by BIGINT,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
-                "CREATE TABLE IF NOT EXISTS topic (id BIGINT AUTO_INCREMENT PRIMARY KEY,batch_id BIGINT NOT NULL,title VARCHAR(200) NOT NULL,description TEXT,source VARCHAR(30) DEFAULT 'preset',creator_id BIGINT NOT NULL,max_capacity INT DEFAULT 1,current_count INT DEFAULT 0,status VARCHAR(20) DEFAULT 'pending',review_comment VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
+                "CREATE TABLE IF NOT EXISTS topic (id BIGINT AUTO_INCREMENT PRIMARY KEY,batch_id BIGINT NOT NULL,title VARCHAR(200) NOT NULL,description TEXT,source VARCHAR(30) DEFAULT 'preset',creator_id BIGINT NOT NULL,max_capacity INT DEFAULT 1,current_count INT DEFAULT 0,status VARCHAR(20) DEFAULT 'pending',review_comment VARCHAR(500),file_path VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS selection_record (id BIGINT AUTO_INCREMENT PRIMARY KEY,batch_id BIGINT NOT NULL,student_id BIGINT NOT NULL,topic_id BIGINT NOT NULL,priority TINYINT,teacher_action VARCHAR(20),teacher_comment VARCHAR(500),is_selected TINYINT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS student_topic (id BIGINT AUTO_INCREMENT PRIMARY KEY,batch_id BIGINT NOT NULL,student_id BIGINT NOT NULL,topic_id BIGINT NOT NULL,advisor_id BIGINT NOT NULL,status VARCHAR(20) DEFAULT 'active',allocation_time DATETIME,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
                 "CREATE TABLE IF NOT EXISTS process_instance (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_topic_id BIGINT NOT NULL,stage VARCHAR(50) NOT NULL,status VARCHAR(20) DEFAULT 'not_started',submitter_id BIGINT,submitted_at DATETIME,file_path VARCHAR(500),content TEXT,reviewer_id BIGINT,reviewed_at DATETIME,review_comment VARCHAR(500),version INT DEFAULT 1,is_editable TINYINT DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
@@ -104,6 +107,22 @@ public class DataInitializer {
                     log.warn("用户 {} 操作失败：{}", u[0], e.getMessage());
                 }
             }
+            try {
+                jdbcTemplate.execute("""
+                        UPDATE sys_user u,
+                               (
+                                   SELECT college_id, major_id
+                                   FROM batch
+                                   WHERE status = 1
+                                   ORDER BY created_at
+                                   LIMIT 1
+                               ) b
+                        SET u.college_id = b.college_id,
+                            u.major_id = b.major_id
+                        WHERE u.username = 'student1'
+                          AND (u.college_id IS NULL OR u.major_id IS NULL)
+                        """);
+            } catch (Exception ignored) {}
 
             // 唯一约束
             try { jdbcTemplate.execute("ALTER TABLE sys_user_role ADD UNIQUE INDEX idx_user_role (user_id, role_id)"); } catch (Exception ignored) {}

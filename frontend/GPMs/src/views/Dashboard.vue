@@ -22,7 +22,7 @@
         <p class="action-card__meta">角色定义与权限授权</p>
         <el-button type="primary" text>进入</el-button>
       </div>
-      <div class="action-card" @click="$router.push(withSelectedBatchQuery('/statistics'))">
+      <div class="action-card" @click="$router.push(withSelectedGradeQuery('/statistics'))">
         <div class="action-card__icon"><el-icon><DataAnalysis /></el-icon></div>
         <h3 class="action-card__title">数据统计</h3>
         <p class="action-card__meta">整体进度、选题和成绩概览</p>
@@ -35,5 +35,5 @@
 <script setup>
 import { DataAnalysis, User, UserFilled } from '@element-plus/icons-vue'
 import WorkbenchOverview from '@/views/components/WorkbenchOverview.vue'
-import { withSelectedBatchQuery } from '@/utils/batchContext'
+import { withSelectedGradeQuery } from '@/utils/batchContext'
 </script>

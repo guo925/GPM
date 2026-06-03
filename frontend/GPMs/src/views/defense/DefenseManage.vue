@@ -12,9 +12,9 @@
       <el-col :span="8">
         <el-card header="答辩批次" class="work-card">
           <el-form inline>
-            <el-form-item label="毕设批次">
-              <el-select v-model="batchId" clearable placeholder="全部批次" style="width:180px">
-                <el-option v-for="item in batchOptions" :key="item.id" :label="item.name" :value="item.id" />
+            <el-form-item label="年级">
+              <el-select v-model="grade" clearable placeholder="全部年级" style="width:180px">
+                <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
               </el-select>
             </el-form-item>
             <el-form-item><el-button @click="fetchBatches">查询</el-button></el-form-item>
@@ -130,7 +130,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getBatchPage } from '@/api/batch'
+import { getBatchPage, getDistinctGrades } from '@/api/batch'
 import {
   addDefenseArrangement,
   createDefenseBatch,
@@ -145,9 +145,10 @@ import {
   saveDefenseResult
 } from '@/api/defense'
 
-const batchId = ref('')
+const grade = ref('')
 const loading = ref(false)
 const submitting = ref(false)
+const grades = ref([])
 const batchOptions = ref([])
 const batches = ref([])
 const groups = ref([])
@@ -196,6 +197,11 @@ const resultRules = {
   decision: [{ required: true, message: '请选择结论', trigger: 'change' }]
 }
 
+const loadGradeOptions = async () => {
+  const res = await getDistinctGrades()
+  grades.value = res.data || []
+}
+
 const loadBatchOptions = async () => {
   const res = await getBatchPage({ current: 1, size: 100, status: 1 })
   batchOptions.value = res.data?.records || []
@@ -204,7 +210,7 @@ const loadBatchOptions = async () => {
 const fetchBatches = async () => {
   loading.value = true
   try {
-    const res = await getDefenseBatches(batchId.value || undefined)
+    const res = await getDefenseBatches(grade.value || undefined)
     batches.value = res.data || []
   } finally {
     loading.value = false
@@ -334,11 +340,12 @@ const saveResult = async () => {
 }
 
 const openBatchDialog = () => {
-  batchDialog.form = { batchId: batchId.value || null, type: 'final_defense', name: '', startTime: '', endTime: '', locationTemplate: '' }
+  batchDialog.form = { batchId: null, type: 'final_defense', name: '', startTime: '', endTime: '', locationTemplate: '' }
   batchDialog.visible = true
 }
 
 onMounted(async () => {
+  await loadGradeOptions()
   await loadBatchOptions()
   await fetchBatches()
 })

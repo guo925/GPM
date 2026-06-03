@@ -7,6 +7,8 @@ import com.gjx.gpms.dto.BatchUpdateDTO;
 import com.gjx.gpms.entity.Batch;
 import com.gjx.gpms.vo.BatchVO;
 
+import java.util.List;
+
 /**
  * 批次服务接口
  *
@@ -48,4 +50,14 @@ public interface BatchService extends IService<Batch> {
      * 处理advanceStage相关逻辑。
      */
     void advanceStage(Long id, String nextStage);
+
+    /**
+     * 根据年级解析所有批次ID列表。
+     */
+    List<Long> resolveBatchIdsByGrade(String grade);
+
+    /**
+     * 获取所有不重复的年级列表。
+     */
+    List<String> getDistinctGrades();
 }

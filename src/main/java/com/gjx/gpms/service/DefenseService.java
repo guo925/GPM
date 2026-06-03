@@ -18,7 +18,7 @@ public interface DefenseService {
     /**
      * 查询列表batches相关逻辑。
      */
-    List<DefenseBatch> listBatches(Long batchId);
+    List<DefenseBatch> listBatches(Long batchId, String grade);
     /**
      * 创建batch相关逻辑。
      */

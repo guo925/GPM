@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 批次管理Controller
  *
@@ -99,5 +101,19 @@ public class BatchController {
     public Result<Void> advanceStage(@PathVariable Long id, @RequestParam String stage) {
         batchService.advanceStage(id, stage);
         return Result.success();
+    }
+
+    @Operation(summary = "年级列表")
+    @PreAuthorize("hasAuthority('batch:query')")
+    @GetMapping("/grades")
+    public Result<List<String>> grades() {
+        return Result.success(batchService.getDistinctGrades());
+    }
+
+    @Operation(summary = "按年级查批次ID")
+    @PreAuthorize("hasAuthority('batch:query')")
+    @GetMapping("/by-grade")
+    public Result<List<Long>> byGrade(@RequestParam String grade) {
+        return Result.success(batchService.resolveBatchIdsByGrade(grade));
     }
 }

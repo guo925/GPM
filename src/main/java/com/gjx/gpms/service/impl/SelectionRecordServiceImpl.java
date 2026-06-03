@@ -14,12 +14,14 @@ import com.gjx.gpms.mq.producer.MqProducer;
 import com.gjx.gpms.mq.producer.NoticeProducer;
 import com.gjx.gpms.mq.producer.OperationLogProducer;
 import com.gjx.gpms.security.context.UserContext;
+import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.SelectionRecordService;
 import com.gjx.gpms.system.entity.User;
 import com.gjx.gpms.system.mapper.UserMapper;
 import com.gjx.gpms.vo.SelectionRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,11 +58,13 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
     private final NoticeProducer noticeProducer;
     private final OperationLogProducer operationLogProducer;
     private final JdbcTemplate jdbcTemplate;
+    private final BatchService batchService;
 
     /**
      * 提交preferences相关逻辑。
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void submitPreferences(SelectionSubmitDTO dto) {
         Long studentId = UserContext.getUserId();
         log.info("学生[{}]提交选题志愿，批次[{}]", studentId, dto.getBatchId());
@@ -69,15 +74,26 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
             throw new BusinessException("批次不存在");
         }
 
-        // 检查是否已经提交过
-        Long existCount = this.count(
+        Long activeTopicCount = studentTopicMapper.selectCount(
+                new LambdaQueryWrapper<StudentTopic>()
+                        .eq(StudentTopic::getBatchId, dto.getBatchId())
+                        .eq(StudentTopic::getStudentId, studentId)
+                        .eq(StudentTopic::getStatus, "active")
+        );
+        if (activeTopicCount > 0) {
+            throw new BusinessException("已完成选题，不可重复提交志愿");
+        }
+
+        List<SelectionRecord> existingRecords = this.list(
                 new LambdaQueryWrapper<SelectionRecord>()
                         .eq(SelectionRecord::getBatchId, dto.getBatchId())
                         .eq(SelectionRecord::getStudentId, studentId)
         );
-
-        if (existCount > 0) {
-            throw new BusinessException("已提交过志愿，请勿重复提交");
+        boolean hasApprovedSelection = existingRecords.stream()
+                .anyMatch(record -> Byte.valueOf((byte) 1).equals(record.getIsSelected())
+                        || "approve".equals(record.getTeacherAction()));
+        if (hasApprovedSelection) {
+            throw new BusinessException("志愿已通过审核，不可重复提交");
         }
 
         // 检查志愿数是否超出限制
@@ -106,21 +122,66 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         message.setTopicIds(dto.getTopicIds());
         message.setReservedTopicId(reservedTopicId);
         message.setSubmittedAt(LocalDateTime.now());
-        mqProducer.sendSelection(message);
+
+        if (!existingRecords.isEmpty()) {
+            this.remove(
+                    new LambdaQueryWrapper<SelectionRecord>()
+                            .eq(SelectionRecord::getBatchId, dto.getBatchId())
+                            .eq(SelectionRecord::getStudentId, studentId)
+            );
+            saveSelectionRecords(dto.getBatchId(), studentId, dto.getTopicIds());
+            log.info("学生[{}]重新提交选题志愿成功，批次[{}]，共{}个志愿",
+                    studentId, dto.getBatchId(), dto.getTopicIds().size());
+            return;
+        }
+
+        try {
+            mqProducer.sendSelection(message);
+        } catch (AmqpException e) {
+            log.warn("RabbitMQ不可用，选题志愿改为同步落库，studentId={}, batchId={}: {}",
+                    studentId, dto.getBatchId(), e.getMessage());
+            saveSelectionRecords(dto.getBatchId(), studentId, dto.getTopicIds());
+            return;
+        }
 
         log.info("学生[{}]提交选题请求已进入异步队列，共{}个志愿", studentId, dto.getTopicIds().size());
+    }
+
+    private void saveSelectionRecords(Long batchId, Long studentId, List<Long> topicIds) {
+        Long existCount = this.count(
+                new LambdaQueryWrapper<SelectionRecord>()
+                        .eq(SelectionRecord::getBatchId, batchId)
+                        .eq(SelectionRecord::getStudentId, studentId)
+        );
+        if (existCount > 0) {
+            throw new BusinessException("已提交过志愿，请勿重复提交");
+        }
+
+        for (int i = 0; i < topicIds.size(); i++) {
+            SelectionRecord record = new SelectionRecord();
+            record.setBatchId(batchId);
+            record.setStudentId(studentId);
+            record.setTopicId(topicIds.get(i));
+            record.setPriority((byte) (i + 1));
+            record.setIsSelected((byte) 0);
+            record.setCreatedAt(LocalDateTime.now());
+            this.save(record);
+            syncSelectionCurrent(record);
+        }
+        log.info("学生[{}]选题志愿同步落库成功，批次[{}]，共{}个志愿", studentId, batchId, topicIds.size());
     }
 
     /**
      * 获取MySelections。
      */
     @Override
-    public List<SelectionRecordVO> getMySelections(Long batchId) {
+    public List<SelectionRecordVO> getMySelections(Long batchId, String grade) {
         Long studentId = UserContext.getUserId();
+        List<Long> batchIds = resolveBatchIds(batchId, grade);
 
         List<SelectionRecord> records = this.list(
                 new LambdaQueryWrapper<SelectionRecord>()
-                        .eq(batchId != null, SelectionRecord::getBatchId, batchId)
+                        .in(batchIds != null && !batchIds.isEmpty(), SelectionRecord::getBatchId, batchIds)
                         .eq(SelectionRecord::getStudentId, studentId)
                         .orderByAsc(SelectionRecord::getPriority)
         );
@@ -132,13 +193,14 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
      * 获取TeacherReviewList。
      */
     @Override
-    public List<SelectionRecordVO> getTeacherReviewList(Long batchId) {
+    public List<SelectionRecordVO> getTeacherReviewList(Long batchId, String grade) {
         Long teacherId = UserContext.getUserId();
+        List<Long> batchIds = resolveBatchIds(batchId, grade);
 
         // 查找该教师创建的课题
         List<Topic> myTopics = topicMapper.selectList(
                 new LambdaQueryWrapper<Topic>()
-                        .eq(batchId != null, Topic::getBatchId, batchId)
+                        .in(batchIds != null && !batchIds.isEmpty(), Topic::getBatchId, batchIds)
                         .eq(Topic::getCreatorId, teacherId)
         );
 
@@ -395,6 +457,13 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
     /**
      * 同步topic current相关逻辑。
      */
+    private List<Long> resolveBatchIds(Long batchId, String grade) {
+        if (grade != null && !grade.isBlank()) {
+            return batchService.resolveBatchIdsByGrade(grade);
+        }
+        return batchId != null ? List.of(batchId) : null;
+    }
+
     private void syncTopicCurrent(Topic topic) {
         try {
             jdbcTemplate.update("UPDATE topic_current SET current_count=?, updated_at=? WHERE id=?",

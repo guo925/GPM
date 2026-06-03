@@ -50,6 +50,9 @@ public class TopicVO {
     @Schema(description = "审核意见")
     private String reviewComment;
 
+    @Schema(description = "课题附件路径")
+    private String filePath;
+
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;
 }

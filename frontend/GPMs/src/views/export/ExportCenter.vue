@@ -9,8 +9,10 @@
 
     <el-card header="成绩单导出" class="work-card">
       <el-form inline>
-        <el-form-item label="批次ID">
-          <el-input v-model="batchId" placeholder="输入批次ID" style="width:180px" />
+        <el-form-item label="年级">
+          <el-select v-model="grade" placeholder="请选择年级" style="width:180px">
+            <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadScores">预览</el-button>
@@ -30,19 +32,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { exportScores } from '@/api/export'
+import { getDistinctGrades } from '@/api/batch'
 
-const batchId = ref('')
+const grade = ref('')
+const grades = ref([])
 const rows = ref([])
 
 const loadScores = async () => {
-  if (!batchId.value) {
-    ElMessage.warning('请输入批次ID')
+  if (!grade.value) {
+    ElMessage.warning('请输入年级')
     return
   }
-  const res = await exportScores(batchId.value)
+  const res = await exportScores(grade.value)
   rows.value = res.data || []
 }
 
@@ -56,8 +60,16 @@ const downloadCsv = () => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `scores-batch-${batchId.value}.csv`
+  link.download = `scores-grade-${grade.value}.csv`
   link.click()
   URL.revokeObjectURL(url)
 }
+
+onMounted(async () => {
+  const res = await getDistinctGrades()
+  grades.value = res.data || []
+  if (grades.value.length > 0) {
+    grade.value = grades.value[0]
+  }
+})
 </script>

@@ -23,12 +23,12 @@ public interface SelectionRecordService extends IService<SelectionRecord> {
     /**
      * 获取MySelections。
      */
-    List<SelectionRecordVO> getMySelections(Long batchId);
+    List<SelectionRecordVO> getMySelections(Long batchId, String grade);
 
     /**
      * 获取TeacherReviewList。
      */
-    List<SelectionRecordVO> getTeacherReviewList(Long batchId);
+    List<SelectionRecordVO> getTeacherReviewList(Long batchId, String grade);
 
     /**
      * 处理teacherReview相关逻辑。

@@ -1,6 +1,6 @@
 import api from './index'
 
-export const getDefenseBatches = (batchId) => api.get('/defense/batches', { params: { batchId } })
+export const getDefenseBatches = (grade) => api.get('/defense/batches', { params: { grade } })
 export const createDefenseBatch = (data) => api.post('/defense/batch/create', data)
 export const deleteDefenseBatch = (id) => api.delete(`/defense/batch/${id}`)
 export const getDefenseGroups = (defenseBatchId) => api.get('/defense/groups', { params: { defenseBatchId } })

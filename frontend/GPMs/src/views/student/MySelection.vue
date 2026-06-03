@@ -21,9 +21,9 @@
       <el-card style="margin-bottom:16px">
         <template #header>提交选题志愿</template>
         <el-form :model="form" label-width="80px">
-          <el-form-item label="选择批次">
-            <el-select v-model="form.batchId" placeholder="请选择批次" @change="onBatchChange" style="width:300px">
-              <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
+          <el-form-item label="选择年级">
+            <el-select v-model="form.grade" placeholder="请选择年级" @change="onGradeChange" style="width:300px">
+              <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
             </el-select>
           </el-form-item>
           <el-form-item label="选择课题">
@@ -34,7 +34,7 @@
                 </el-checkbox>
               </div>
             </el-checkbox-group>
-            <div v-if="topics.length === 0 && form.batchId" style="color:#909399">该批次暂无可选课题</div>
+            <div v-if="topics.length === 0 && form.grade" style="color:#909399">该年级暂无可选课题</div>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :disabled="!canSubmit" :loading="submitting" @click="handleSubmit">
@@ -70,21 +70,21 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getMyTopic } from '@/api/studentTopic'
 import { getMySelections, submitPreferences } from '@/api/selection'
-import { getBatchPage } from '@/api/batch'
+import { getDistinctGrades, getBatchesByGrade } from '@/api/batch'
 import { getTopicPage } from '@/api/topic'
 
 const myTopic = ref(null)
 const mySelections = ref([])
-const batches = ref([])
+const grades = ref([])
 const topics = ref([])
 const submitting = ref(false)
 
 const form = reactive({
-  batchId: null,
+  grade: null,
   topicIds: []
 })
 
-const canSubmit = computed(() => form.batchId && form.topicIds.length > 0)
+const canSubmit = computed(() => form.grade && form.topicIds.length > 0)
 
 const fetchData = async () => {
   const topicRes = await getMyTopic()
@@ -92,32 +92,32 @@ const fetchData = async () => {
     myTopic.value = topicRes.data
     return
   }
-  const batchRes = await getBatchPage({ current: 1, size: 50 })
-  batches.value = batchRes.data?.records || batchRes.data || []
+  const gradeRes = await getDistinctGrades()
+  grades.value = gradeRes.data || []
 }
 
-const onBatchChange = async (batchId) => {
+const onGradeChange = async (grade) => {
   form.topicIds = []
-  const res = await getTopicPage({ current: 1, size: 100, batchId, status: 'approved' })
+  const res = await getTopicPage({ current: 1, size: 100, grade, status: 'approved' })
   topics.value = res.data?.records || res.data || []
-  // 加载已有志愿
-  const selRes = await getMySelections(batchId)
+  const selRes = await getMySelections(grade)
   mySelections.value = selRes.data || []
 }
 
 const handleSubmit = async () => {
   submitting.value = true
   try {
+    const firstTopic = topics.value.find(t => form.topicIds.includes(t.id))
     await submitPreferences({
-      batchId: form.batchId,
+      batchId: firstTopic?.batchId,
       topicIds: form.topicIds
     })
     ElMessage.success('选题请求已提交，正在处理中')
     form.topicIds = []
-    await onBatchChange(form.batchId)
-    setTimeout(() => onBatchChange(form.batchId), 1500)
-  } catch {
-    ElMessage.error('提交失败')
+    await onGradeChange(form.grade)
+    setTimeout(() => onGradeChange(form.grade), 1500)
+  } catch (error) {
+    ElMessage.error(error.message || '提交失败')
   } finally {
     submitting.value = false
   }

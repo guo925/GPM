@@ -38,8 +38,9 @@ public class DefenseController {
      */
     @Operation(summary = "答辩批次列表")
     @GetMapping("/batches")
-    public Result<List<DefenseBatch>> listBatches(@RequestParam(required = false) Long batchId) {
-        return Result.success(defenseService.listBatches(batchId));
+    public Result<List<DefenseBatch>> listBatches(@RequestParam(required = false) Long batchId,
+                                                   @RequestParam(required = false) String grade) {
+        return Result.success(defenseService.listBatches(batchId, grade));
     }
 
     /**

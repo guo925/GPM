@@ -27,6 +27,8 @@ public class FeatureWorkflowController {
 
     private static final String WORKFLOW_ROLES =
             "hasAnyRole('SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER','STUDENT')";
+    private static final String REVIEW_ROLES =
+            "hasAnyRole('SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER')";
 
     private static final Map<String, String> THESIS_TYPES = Map.ofEntries(
             Map.entry("task-book", "taskBook"),
@@ -64,9 +66,10 @@ public class FeatureWorkflowController {
     @GetMapping("/thesis/{feature}")
     public Result<List<WorkflowItem>> listThesis(@PathVariable String feature,
                                                  @RequestParam(required = false) Long batchId,
+                                                 @RequestParam(required = false) String grade,
                                                  @RequestParam(required = false) String keyword,
                                                  @RequestParam(required = false) String status) {
-        return Result.success(workflowItemService.list(resolve(THESIS_TYPES, feature), batchId, keyword, status));
+        return Result.success(workflowItemService.list(resolve(THESIS_TYPES, feature), batchId, grade, keyword, status));
     }
 
     @Operation(summary = "论文管理功能保存")
@@ -78,7 +81,7 @@ public class FeatureWorkflowController {
     }
 
     @Operation(summary = "论文管理功能审核")
-    @PreAuthorize(WORKFLOW_ROLES)
+    @PreAuthorize(REVIEW_ROLES)
     @PutMapping("/thesis/{feature}/review")
     public Result<Void> reviewThesis(@PathVariable String feature, @Valid @RequestBody WorkflowReviewDTO dto) {
         resolve(THESIS_TYPES, feature);
@@ -100,9 +103,10 @@ public class FeatureWorkflowController {
     @GetMapping("/score-workflow/{feature}")
     public Result<List<WorkflowItem>> listScore(@PathVariable String feature,
                                                 @RequestParam(required = false) Long batchId,
+                                                @RequestParam(required = false) String grade,
                                                 @RequestParam(required = false) String keyword,
                                                 @RequestParam(required = false) String status) {
-        return Result.success(workflowItemService.list(resolve(SCORE_TYPES, feature), batchId, keyword, status));
+        return Result.success(workflowItemService.list(resolve(SCORE_TYPES, feature), batchId, grade, keyword, status));
     }
 
     @Operation(summary = "成绩评定功能保存")
@@ -114,7 +118,7 @@ public class FeatureWorkflowController {
     }
 
     @Operation(summary = "成绩评定功能审核或评分")
-    @PreAuthorize(WORKFLOW_ROLES)
+    @PreAuthorize(REVIEW_ROLES)
     @PutMapping("/score-workflow/{feature}/review")
     public Result<Void> reviewScore(@PathVariable String feature, @Valid @RequestBody WorkflowReviewDTO dto) {
         resolve(SCORE_TYPES, feature);
@@ -136,9 +140,10 @@ public class FeatureWorkflowController {
     @GetMapping("/special/{feature}")
     public Result<List<WorkflowItem>> listSpecial(@PathVariable String feature,
                                                   @RequestParam(required = false) Long batchId,
+                                                  @RequestParam(required = false) String grade,
                                                   @RequestParam(required = false) String keyword,
                                                   @RequestParam(required = false) String status) {
-        return Result.success(workflowItemService.list(resolve(SPECIAL_TYPES, feature), batchId, keyword, status));
+        return Result.success(workflowItemService.list(resolve(SPECIAL_TYPES, feature), batchId, grade, keyword, status));
     }
 
     @Operation(summary = "特殊情况功能保存")
@@ -150,7 +155,7 @@ public class FeatureWorkflowController {
     }
 
     @Operation(summary = "特殊情况功能审核")
-    @PreAuthorize(WORKFLOW_ROLES)
+    @PreAuthorize(REVIEW_ROLES)
     @PutMapping("/special/{feature}/review")
     public Result<Void> reviewSpecial(@PathVariable String feature, @Valid @RequestBody WorkflowReviewDTO dto) {
         resolve(SPECIAL_TYPES, feature);

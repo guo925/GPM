@@ -9,6 +9,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.util.stream.Collectors;
 
@@ -56,6 +58,15 @@ public class GlobalExceptionHandler {
     public Result<Void> handleBusinessException(BusinessException e) {
         log.error("业务异常：{}", e.getMessage());
         return Result.error(e.getMessage());
+    }
+
+    /**
+     * 文件上传异常
+     */
+    @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
+    public Result<Void> handleUploadException(Exception e) {
+        log.error("文件上传失败：{}", e.getMessage());
+        return Result.error("文件大小不能超过50MB");
     }
 
     /**

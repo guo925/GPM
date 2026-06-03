@@ -28,9 +28,9 @@
           <el-form-item label="关键词">
             <el-input v-model="query.keyword" clearable placeholder="学生、题目、导师" style="width:220px" />
           </el-form-item>
-          <el-form-item label="届别">
-            <el-select v-model="query.batchId" placeholder="全部届别" clearable style="width:240px" @change="onBatchChange">
-              <el-option v-for="batch in batches" :key="batch.id" :label="`${batch.grade} - ${batch.name}`" :value="batch.id" />
+          <el-form-item label="年级">
+            <el-select v-model="query.grade" placeholder="全部年级" clearable style="width:240px" @change="onGradeChange">
+              <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
@@ -54,7 +54,12 @@
         <el-table-column prop="studentName" label="学生" width="120" />
         <el-table-column prop="studentNo" label="学号" width="130" />
         <el-table-column prop="title" :label="config.itemLabel || '论文/事项'" min-width="220" />
-        <el-table-column v-if="config.extraField" prop="extra" :label="config.extraField.label" min-width="150" />
+        <el-table-column v-if="config.extraField" prop="extra" :label="config.extraField.label" min-width="150">
+          <template #default="{ row }">
+            <el-link v-if="config.extraField.upload && row.extra" type="primary" :href="getFileViewUrl(row.extra)" target="_blank">查看</el-link>
+            <span v-else>{{ row.extra || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="advisorName" label="指导教师" width="120" />
         <el-table-column prop="updatedAt" label="更新时间" width="170" />
         <el-table-column prop="status" label="状态" width="110">
@@ -67,8 +72,8 @@
           <template #default="{ row }">
             <el-button type="primary" text @click="openDetail(row)">查看</el-button>
             <el-button v-if="config.allowScore" type="success" text @click="openScore(row)">评分</el-button>
-            <el-button v-if="config.allowApprove" type="success" text @click="approve(row)">{{ config.approveText || '通过' }}</el-button>
-            <el-button v-if="config.allowApprove" type="warning" text @click="openReject(row)">退回</el-button>
+            <el-button v-if="canApprove" type="success" text @click="approve(row)">{{ config.approveText || '通过' }}</el-button>
+            <el-button v-if="canApprove" type="warning" text @click="openReject(row)">退回</el-button>
             <el-button v-if="config.allowEdit" type="primary" text @click="openEdit(row)">修改</el-button>
             <el-button type="danger" text @click="removeRow(row)">删除</el-button>
           </template>
@@ -98,7 +103,23 @@
           <el-input-number v-model="formDialog.form.score" :min="0" :max="100" :precision="1" />
         </el-form-item>
         <el-form-item v-if="config.extraField" :label="config.extraField.label">
-          <el-input v-model="formDialog.form.extra" :type="config.extraField.type || 'text'" :rows="3" />
+          <template v-if="config.extraField.upload">
+            <div class="attachment-row">
+              <el-upload
+                :show-file-list="false"
+                :http-request="uploadWorkflowFile"
+                :before-upload="beforeUpload"
+              >
+                <el-button :loading="formDialog.uploading">
+                  <el-icon><Upload /></el-icon>上传附件
+                </el-button>
+              </el-upload>
+              <el-link v-if="formDialog.form.extra" type="primary" :href="getFileViewUrl(formDialog.form.extra)" target="_blank">
+                查看附件
+              </el-link>
+            </div>
+          </template>
+          <el-input v-else v-model="formDialog.form.extra" :type="config.extraField.type || 'text'" :rows="3" />
         </el-form-item>
         <el-form-item :label="config.remarkLabel || '说明'">
           <el-input v-model="formDialog.form.remark" type="textarea" :rows="4" />
@@ -132,6 +153,12 @@
         <el-descriptions-item label="指导教师">{{ detailDialog.row.advisorName }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ statusLabel(detailDialog.row.status) }}</el-descriptions-item>
         <el-descriptions-item label="标题" :span="2">{{ detailDialog.row.title }}</el-descriptions-item>
+        <el-descriptions-item v-if="config.extraField" :label="config.extraField.label" :span="2">
+          <el-link v-if="config.extraField.upload && detailDialog.row.extra" type="primary" :href="getFileViewUrl(detailDialog.row.extra)" target="_blank">
+            查看附件
+          </el-link>
+          <span v-else>{{ detailDialog.row.extra || '-' }}</span>
+        </el-descriptions-item>
         <el-descriptions-item v-if="detailDialog.row.score !== null" label="分数">{{ detailDialog.row.score }}</el-descriptions-item>
         <el-descriptions-item label="更新时间">{{ detailDialog.row.updatedAt }}</el-descriptions-item>
         <el-descriptions-item label="说明" :span="2">{{ detailDialog.row.remark || '-' }}</el-descriptions-item>
@@ -145,12 +172,17 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, Plus } from '@element-plus/icons-vue'
-import { getBatchPage } from '@/api/batch'
+import { Download, Plus, Upload } from '@element-plus/icons-vue'
+import { getBatchPage, getDistinctGrades } from '@/api/batch'
+import { getFileViewUrl, uploadFile } from '@/api/file'
 import { deleteFeatureItem, getFeatureItems, reviewFeatureItem, saveFeatureItem } from '@/api/workflow'
-import { getSelectedBatchId, setSelectedBatchId } from '@/utils/batchContext'
+import { getSelectedGrade, setSelectedGrade } from '@/utils/batchContext'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
+const isStudent = computed(() => authStore.roles.includes('STUDENT'))
+const canApprove = computed(() => config.value.allowApprove && !isStudent.value)
 
 const baseStatuses = [
   { label: '待处理', value: 'pending' },
@@ -174,16 +206,16 @@ const specialStatuses = [
 ]
 
 const workflowConfigs = {
-  taskBook: { apiBase: '/thesis/task-book', category: 'thesis', categoryLabel: '论文流程', title: '任务书', subtitle: '任务书提交、审核与退回处理', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '任务书题目', extraField: { label: '附件路径' }, remarkLabel: '任务要求' },
-  openingReport: { apiBase: '/thesis/opening-report', category: 'thesis', categoryLabel: '论文流程', title: '开题报告', subtitle: '开题报告材料提交、查看和审核', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '开题报告', extraField: { label: '报告附件' }, remarkLabel: '研究内容' },
+  taskBook: { apiBase: '/thesis/task-book', category: 'thesis', categoryLabel: '论文流程', title: '任务书', subtitle: '任务书提交、审核与退回处理', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '任务书题目', extraField: { label: '附件路径', upload: true }, remarkLabel: '任务要求' },
+  openingReport: { apiBase: '/thesis/opening-report', category: 'thesis', categoryLabel: '论文流程', title: '开题报告', subtitle: '开题报告材料提交、查看和审核', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '开题报告', extraField: { label: '报告附件', upload: true }, remarkLabel: '研究内容' },
   openingDefense: { apiBase: '/thesis/opening-defense', category: 'thesis', categoryLabel: '答辩流程', title: '开题答辩', subtitle: '开题答辩安排、记录和结论维护', allowCreate: true, allowApprove: true, allowExport: true, itemLabel: '答辩题目', extraField: { label: '答辩地点' }, remarkLabel: '答辩记录' },
   openingMinutes: { apiBase: '/thesis/opening-minutes', category: 'thesis', categoryLabel: '会议纪要', title: '开题报告会议纪要', subtitle: '开题报告会议纪要上传、确认和归档', allowCreate: true, allowApprove: true, allowEdit: true, itemLabel: '会议主题', extraField: { label: '会议纪要', type: 'textarea' }, remarkLabel: '参会与决议' },
   weeklyLog: { apiBase: '/thesis/weekly-log', category: 'thesis', categoryLabel: '指导记录', title: '指导记录周记', subtitle: '学生周记查看、指导教师批阅和反馈', allowCreate: true, allowApprove: true, allowEdit: true, itemLabel: '周记标题', extraField: { label: '周记内容', type: 'textarea' }, remarkLabel: '导师反馈' },
-  midterm: { apiBase: '/thesis/midterm', category: 'thesis', categoryLabel: '过程检查', title: '中期检查', subtitle: '中期检查材料审核、整改意见和结果维护', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '检查事项', extraField: { label: '检查材料' }, remarkLabel: '整改意见' },
+  midterm: { apiBase: '/thesis/midterm', category: 'thesis', categoryLabel: '过程检查', title: '中期检查', subtitle: '中期检查材料审核、整改意见和结果维护', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '检查事项', extraField: { label: '检查材料', upload: true }, remarkLabel: '整改意见' },
   thesisGuidance: { apiBase: '/thesis/guidance', category: 'thesis', categoryLabel: '论文指导', title: '论文指导', subtitle: '论文指导记录、修改意见和阶段反馈', allowCreate: true, allowApprove: true, allowEdit: true, itemLabel: '指导主题', extraField: { label: '指导内容', type: 'textarea' }, remarkLabel: '修改建议' },
-  postDefenseRevision: { apiBase: '/thesis/post-defense-revision', category: 'thesis', categoryLabel: '修改审核', title: '答辩后论文修改审核', subtitle: '答辩后修改稿提交、审核和意见退回', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '修改稿标题', extraField: { label: '修改稿附件' }, remarkLabel: '修改说明' },
-  finalThesis: { apiBase: '/thesis/final-thesis', category: 'thesis', categoryLabel: '终稿查看', title: '查看论文终稿', subtitle: '论文终稿查看、确认和导出', allowApprove: true, allowExport: true, itemLabel: '论文终稿', extraField: { label: '终稿附件' }, remarkLabel: '归档说明', approveText: '确认' },
-  finalDesign: { apiBase: '/thesis/final-design', category: 'thesis', categoryLabel: '终稿查看', title: '查看设计终稿', subtitle: '设计类终稿查看、确认和导出', allowApprove: true, allowExport: true, itemLabel: '设计终稿', extraField: { label: '设计附件' }, remarkLabel: '归档说明', approveText: '确认' },
+  postDefenseRevision: { apiBase: '/thesis/post-defense-revision', category: 'thesis', categoryLabel: '修改审核', title: '答辩后论文修改审核', subtitle: '答辩后修改稿提交、审核和意见退回', allowCreate: true, allowApprove: true, allowEdit: true, allowExport: true, itemLabel: '修改稿标题', extraField: { label: '修改稿附件', upload: true }, remarkLabel: '修改说明' },
+  finalThesis: { apiBase: '/thesis/final-thesis', category: 'thesis', categoryLabel: '终稿查看', title: '查看论文终稿', subtitle: '论文终稿查看、确认和导出', allowApprove: true, allowExport: true, itemLabel: '论文终稿', extraField: { label: '终稿附件', upload: true }, remarkLabel: '归档说明', approveText: '确认' },
+  finalDesign: { apiBase: '/thesis/final-design', category: 'thesis', categoryLabel: '终稿查看', title: '查看设计终稿', subtitle: '设计类终稿查看、确认和导出', allowApprove: true, allowExport: true, itemLabel: '设计终稿', extraField: { label: '设计附件', upload: true }, remarkLabel: '归档说明', approveText: '确认' },
   advisorScore: { apiBase: '/score-workflow/advisor', category: 'score', categoryLabel: '成绩评定', title: '指导导师评分', subtitle: '指导教师评分录入、修改和提交', allowScore: true, allowExport: true, showScore: true, itemLabel: '论文题目', extraField: { label: '评分项' }, scoreLabel: '指导分', remarkLabel: '评分说明' },
   reviewerScore: { apiBase: '/score-workflow/reviewer', category: 'score', categoryLabel: '成绩评定', title: '评阅导师评分', subtitle: '评阅教师评分录入、复核和提交', allowScore: true, allowExport: true, showScore: true, itemLabel: '论文题目', extraField: { label: '评阅意见' }, scoreLabel: '评阅分', remarkLabel: '评分说明' },
   deputyReview: { apiBase: '/score-workflow/deputy-review', category: 'score', categoryLabel: '成绩审核', title: '论文副院长审核', subtitle: '学院层面论文成绩和材料审核', allowApprove: true, allowExport: true, showScore: true, itemLabel: '论文题目', extraField: { label: '审核批次' }, scoreLabel: '综合分', remarkLabel: '审核意见', approveText: '审核通过' },
@@ -204,10 +236,11 @@ const statusOptions = computed(() => {
 })
 
 const batches = ref([])
-const routeBatchId = () => route.query.batchId ? Number(route.query.batchId) : getSelectedBatchId()
-const query = reactive({ keyword: '', status: '', batchId: routeBatchId() })
+const grades = ref([])
+const routeGrade = () => route.query.grade || getSelectedGrade()
+const query = reactive({ keyword: '', status: '', grade: routeGrade() })
 const state = reactive({ rows: [] })
-const formDialog = reactive({ visible: false, mode: 'create', title: '新增', form: {} })
+const formDialog = reactive({ visible: false, mode: 'create', title: '新增', uploading: false, form: {} })
 const reviewDialog = reactive({ visible: false, mode: 'approve', title: '审核', row: null, form: { score: 80, comment: '' } })
 const detailDialog = reactive({ visible: false, row: {} })
 
@@ -215,7 +248,7 @@ const formatTime = (value) => value ? String(value).replace('T', ' ').slice(0, 1
 
 const loadRows = async () => {
   const res = await getFeatureItems(config.value.apiBase, {
-    batchId: query.batchId || undefined,
+    grade: query.grade || undefined,
     workflowType: workflowType.value,
     keyword: query.keyword || undefined,
     status: query.status || undefined
@@ -229,12 +262,12 @@ const loadRows = async () => {
 watch(() => route.meta.workflowType, () => {
   query.keyword = ''
   query.status = ''
-  query.batchId = routeBatchId()
+  query.grade = routeGrade()
   loadRows()
 }, { immediate: true })
 
-watch(() => route.query.batchId, () => {
-  query.batchId = routeBatchId()
+watch(() => route.query.grade, () => {
+  query.grade = routeGrade()
   loadRows()
 })
 
@@ -260,13 +293,13 @@ const resetQuery = () => {
   loadRows()
 }
 
-const onBatchChange = () => {
-  setSelectedBatchId(query.batchId)
+const onGradeChange = () => {
+  setSelectedGrade(query.grade)
   loadRows()
 }
 
 const emptyForm = () => ({
-  batchId: query.batchId,
+  batchId: null,
   studentName: '',
   studentNo: '',
   advisorName: '',
@@ -280,6 +313,7 @@ const emptyForm = () => ({
 const openCreate = () => {
   formDialog.mode = 'create'
   formDialog.title = config.value.createText || `新增${config.value.title}`
+  formDialog.uploading = false
   formDialog.form = emptyForm()
   formDialog.visible = true
 }
@@ -287,25 +321,51 @@ const openCreate = () => {
 const openEdit = (row) => {
   formDialog.mode = 'edit'
   formDialog.title = `修改${config.value.title}`
+  formDialog.uploading = false
   formDialog.form = { ...row }
   formDialog.visible = true
 }
 
 const saveForm = async () => {
+  if (formDialog.uploading) {
+    ElMessage.warning('附件正在上传，请稍候')
+    return
+  }
   const form = { ...formDialog.form }
-  if (!form.studentName || !form.studentNo || !form.title) {
-    ElMessage.warning('请填写学生、学号和标题')
+  if (!form.title || (!isStudent.value && (!form.studentName || !form.studentNo))) {
+    ElMessage.warning(isStudent.value ? '请填写标题' : '请填写学生、学号和标题')
     return
   }
   await saveFeatureItem(config.value.apiBase, {
     ...form,
-    batchId: form.batchId || query.batchId || undefined,
+    batchId: form.batchId || undefined,
+    grade: query.grade || undefined,
     workflowType: workflowType.value,
     status: form.status || 'pending'
   })
   formDialog.visible = false
   ElMessage.success('保存成功')
   await loadRows()
+}
+
+const beforeUpload = (file) => {
+  const maxSize = 50 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.warning('文件大小不能超过50MB')
+    return false
+  }
+  return true
+}
+
+const uploadWorkflowFile = async ({ file }) => {
+  formDialog.uploading = true
+  try {
+    const res = await uploadFile(file, 'thesis')
+    formDialog.form.extra = res.data.url
+    ElMessage.success('上传成功')
+  } finally {
+    formDialog.uploading = false
+  }
 }
 
 const openDetail = (row) => {
@@ -369,12 +429,15 @@ const exportRows = () => {
 }
 
 onMounted(async () => {
-  const res = await getBatchPage({ current: 1, size: 100 })
-  batches.value = res.data?.records || []
-  if (!query.batchId) {
-    const current = batches.value.find(item => Number(item.status) === 1) || batches.value[0]
-    query.batchId = current?.id || null
-    setSelectedBatchId(query.batchId)
+  const [gradeRes, batchRes] = await Promise.all([
+    getDistinctGrades(),
+    getBatchPage({ current: 1, size: 100 })
+  ])
+  grades.value = gradeRes.data || []
+  batches.value = batchRes.data?.records || []
+  if (!query.grade && grades.value.length > 0) {
+    query.grade = grades.value[0]
+    setSelectedGrade(query.grade)
     await loadRows()
   }
 })
@@ -398,6 +461,12 @@ onMounted(async () => {
   margin-top: 6px;
   color: var(--gp-text-muted);
   font-size: 13px;
+}
+
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 @media (max-width: 900px) {

@@ -6,6 +6,7 @@ import com.gjx.gpms.common.exception.BusinessException;
 import com.gjx.gpms.dto.ScoreSheetDTO;
 import com.gjx.gpms.entity.*;
 import com.gjx.gpms.mapper.*;
+import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.ScoreService;
 import com.gjx.gpms.system.entity.User;
 import com.gjx.gpms.system.mapper.UserMapper;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,6 +35,7 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
     private final StudentTopicMapper studentTopicMapper;
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
+    private final BatchService batchService;
 
     /**
      * 计算相关逻辑。
@@ -150,7 +153,7 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
                         .eq(ScoreSheet::getStudentTopicId, studentTopicId)
         );
 
-        if (sheet == null) throw new BusinessException("成绩单不存在");
+        if (sheet == null) return null;
 
         List<ScoreDetail> details = scoreDetailMapper.selectList(
                 new LambdaQueryWrapper<ScoreDetail>().eq(ScoreDetail::getSheetId, sheet.getId())
@@ -199,14 +202,22 @@ public class ScoreServiceImpl extends ServiceImpl<ScoreSheetMapper, ScoreSheet> 
      * 查询列表by batch相关逻辑。
      */
     @Override
-    public List<ScoreSheetVO> listByBatch(Long batchId) {
+    public List<ScoreSheetVO> listByBatch(Long batchId, String grade) {
+        List<Long> batchIds = resolveBatchIds(batchId, grade);
         List<ScoreSheet> sheets = this.list(
-                new LambdaQueryWrapper<ScoreSheet>().eq(ScoreSheet::getBatchId, batchId)
+                new LambdaQueryWrapper<ScoreSheet>().in(batchIds != null && !batchIds.isEmpty(), ScoreSheet::getBatchId, batchIds)
         );
 
         return sheets.stream().map(s -> {
             try { return getDetail(s.getStudentTopicId()); }
             catch (Exception e) { return null; }
         }).filter(v -> v != null).collect(Collectors.toList());
+    }
+
+    private List<Long> resolveBatchIds(Long batchId, String grade) {
+        if (grade != null && !grade.isBlank()) {
+            return batchService.resolveBatchIdsByGrade(grade);
+        }
+        return batchId != null ? List.of(batchId) : null;
     }
 }

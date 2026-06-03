@@ -1,3 +1,3 @@
 import api from './index'
 
-export const exportScores = (batchId) => api.get(`/export/scores/${batchId}`)
+export const exportScores = (grade) => api.get('/export/scores', { params: { grade } })

@@ -12,6 +12,8 @@ import com.gjx.gpms.mapper.BatchMapper;
 import com.gjx.gpms.mapper.StudentTopicMapper;
 import com.gjx.gpms.mapper.TopicMapper;
 import com.gjx.gpms.security.context.UserContext;
+import com.gjx.gpms.security.model.LoginUser;
+import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.StudentTopicService;
 import com.gjx.gpms.system.entity.User;
 import com.gjx.gpms.system.mapper.UserMapper;
@@ -20,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -36,17 +40,20 @@ public class StudentTopicServiceImpl extends ServiceImpl<StudentTopicMapper, Stu
     private final BatchMapper batchMapper;
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
+    private final BatchService batchService;
 
     /**
      * 分页查询相关逻辑。
      */
     @Override
-    public IPage<StudentTopicVO> page(long current, long size, Long batchId, Long advisorId) {
+    public IPage<StudentTopicVO> page(long current, long size, Long batchId, String grade, Long advisorId) {
         Page<StudentTopic> page = new Page<>(current, size);
+        List<Long> batchIds = resolveBatchIds(batchId, grade);
 
         LambdaQueryWrapper<StudentTopic> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(batchId != null, StudentTopic::getBatchId, batchId);
+        wrapper.in(batchIds != null && !batchIds.isEmpty(), StudentTopic::getBatchId, batchIds);
         wrapper.eq(advisorId != null, StudentTopic::getAdvisorId, advisorId);
+        applyUserScope(wrapper);
         wrapper.orderByDesc(StudentTopic::getCreatedAt);
 
         Page<StudentTopic> stPage = this.page(page, wrapper);
@@ -83,6 +90,18 @@ public class StudentTopicServiceImpl extends ServiceImpl<StudentTopicMapper, Stu
         }).collect(Collectors.toList()));
 
         return voPage;
+    }
+
+    private void applyUserScope(LambdaQueryWrapper<StudentTopic> wrapper) {
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser == null || loginUser.getRoleCodes() == null) {
+            return;
+        }
+        if (loginUser.getRoleCodes().contains("STUDENT")) {
+            wrapper.eq(StudentTopic::getStudentId, loginUser.getUserId());
+        } else if (loginUser.getRoleCodes().contains("TEACHER")) {
+            wrapper.eq(StudentTopic::getAdvisorId, loginUser.getUserId());
+        }
     }
 
     /**
@@ -124,5 +143,12 @@ public class StudentTopicServiceImpl extends ServiceImpl<StudentTopicMapper, Stu
         vo.setAllocationTime(st.getAllocationTime());
         vo.setCreatedAt(st.getCreatedAt());
         return vo;
+    }
+
+    private List<Long> resolveBatchIds(Long batchId, String grade) {
+        if (grade != null && !grade.isBlank()) {
+            return batchService.resolveBatchIdsByGrade(grade);
+        }
+        return batchId != null ? List.of(batchId) : null;
     }
 }

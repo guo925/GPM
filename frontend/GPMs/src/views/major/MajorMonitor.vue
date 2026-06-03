@@ -3,16 +3,16 @@
     <h3>专业管理</h3>
 
     <el-form inline style="margin-bottom:16px">
-      <el-form-item label="选择批次">
-        <el-select v-model="batchId" placeholder="请选择批次" @change="onBatchChange" style="width:280px">
-          <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
+      <el-form-item label="选择年级">
+        <el-select v-model="grade" placeholder="请选择年级" @change="onGradeChange" style="width:280px">
+          <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
         </el-select>
       </el-form-item>
     </el-form>
 
-    <el-empty v-if="!batchId" description="请选择批次" />
+    <el-empty v-if="!grade" description="请选择年级" />
 
-    <el-tabs v-model="tab" v-if="batchId" type="border-card">
+    <el-tabs v-model="tab" v-if="grade" type="border-card">
       <!-- 教师分配 -->
       <el-tab-pane label="教师分配" name="teacher">
         <el-table v-if="teacherList.length" :data="teacherList" border stripe>
@@ -98,7 +98,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { getBatchPage } from '@/api/batch'
+import { getDistinctGrades } from '@/api/batch'
 import { getStudentTopicPage } from '@/api/studentTopic'
 import { getReviewList } from '@/api/selection'
 import { getProcessList } from '@/api/process'
@@ -106,8 +106,8 @@ import { getBatchScores } from '@/api/score'
 import { getUserPage } from '@/api/user'
 
 const tab = ref('teacher')
-const batchId = ref(null)
-const batches = ref([])
+const grade = ref(null)
+const grades = ref([])
 
 // 教师分配
 const teacherList = ref([])
@@ -172,42 +172,35 @@ const barStyle = (count, max) => ({
   backgroundColor: '#409EFF', margin: '8px auto 0', borderRadius: '4px'
 })
 
-const fetchBatches = async () => {
-  const res = await getBatchPage({ current: 1, size: 50 })
-  batches.value = res.data?.records || res.data || []
+const fetchGrades = async () => {
+  const res = await getDistinctGrades()
+  grades.value = res.data || []
 }
 
-const onBatchChange = async () => {
+const onGradeChange = async () => {
   await Promise.all([loadTeachers(), loadSelections(), loadProcess(), loadScores()])
 }
 
 const loadTeachers = async () => {
-  const res = await getStudentTopicPage({ current: 1, size: 200, batchId: batchId.value })
+  const res = await getStudentTopicPage({ current: 1, size: 200, grade: grade.value })
   teacherList.value = res.data?.records || res.data || []
 }
 
 const loadSelections = async () => {
-  // 获取学生总数（通过该批次关联的专业用户）
   const allRes = await getUserPage({ current: 1, size: 200 })
-  const allUsers = allRes.data?.records || []
-  // 统计：通过选题记录
-  const selRes = await getReviewList(batchId.value)
+  const selRes = await getReviewList(grade.value)
   const allSel = selRes.data || []
   pendingList.value = allSel.filter(r => !r.teacherAction)
-  // 简化统计：已分配的学生
   const assigned = teacherList.value.length
   selectionStats.selected = assigned
   selectionStats.pendingReview = pendingList.value.length
-  // 估算学生总数
   selectionStats.total = Math.max(assigned + pendingList.value.length, assigned)
   selectionStats.unselected = Math.max(0, selectionStats.total - assigned - pendingList.value.length)
 }
 
 const loadProcess = async () => {
-  // 先获取已选题学生
-  const res = await getStudentTopicPage({ current: 1, size: 200, batchId: batchId.value })
+  const res = await getStudentTopicPage({ current: 1, size: 200, grade: grade.value })
   studentTopicList.value = res.data?.records || res.data || []
-  // 加载每个学生的流程
   const data = {}
   await Promise.all(studentTopicList.value.map(async st => {
     try {
@@ -220,12 +213,12 @@ const loadProcess = async () => {
 
 const loadScores = async () => {
   try {
-    const res = await getBatchScores(batchId.value)
+    const res = await getBatchScores(grade.value)
     batchScores.value = res.data || []
   } catch { batchScores.value = [] }
 }
 
-onMounted(fetchBatches)
+onMounted(fetchGrades)
 </script>
 
 <style scoped>

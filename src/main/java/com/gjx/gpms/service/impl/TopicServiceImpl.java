@@ -14,6 +14,8 @@ import com.gjx.gpms.entity.Topic;
 import com.gjx.gpms.mapper.BatchMapper;
 import com.gjx.gpms.mapper.TopicMapper;
 import com.gjx.gpms.security.context.UserContext;
+import com.gjx.gpms.security.model.LoginUser;
+import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.TopicService;
 import com.gjx.gpms.system.entity.User;
 import com.gjx.gpms.system.mapper.UserMapper;
@@ -25,6 +27,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,17 +46,20 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     private final UserMapper userMapper;
     private final RedisCacheService redisCacheService;
     private final JdbcTemplate jdbcTemplate;
+    private final BatchService batchService;
 
     /**
      * 分页查询相关逻辑。
      */
     @Override
-    public IPage<TopicVO> page(long current, long size, Long batchId, String status) {
+    public IPage<TopicVO> page(long current, long size, Long batchId, String grade, String status) {
         Page<Topic> page = new Page<>(current, size);
+        List<Long> batchIds = resolveBatchIds(batchId, grade);
 
         LambdaQueryWrapper<Topic> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(batchId != null, Topic::getBatchId, batchId);
+        wrapper.in(batchIds != null && !batchIds.isEmpty(), Topic::getBatchId, batchIds);
         wrapper.eq(status != null, Topic::getStatus, status);
+        applyStudentScope(wrapper);
         wrapper.orderByDesc(Topic::getCreatedAt);
 
         Page<Topic> topicPage = this.page(page, wrapper);
@@ -72,6 +78,45 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
                 .collect(Collectors.toList()));
 
         return voPage;
+    }
+
+    private void applyStudentScope(LambdaQueryWrapper<Topic> wrapper) {
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser == null
+                || loginUser.getRoleCodes() == null) {
+            return;
+        }
+
+        if (loginUser.getRoleCodes().contains("STUDENT")) {
+            applyStudentFilter(wrapper, loginUser);
+        } else if (loginUser.getRoleCodes().contains("TEACHER")) {
+            wrapper.eq(Topic::getCreatorId, loginUser.getUserId());
+        }
+    }
+
+    private void applyStudentFilter(LambdaQueryWrapper<Topic> wrapper, LoginUser loginUser) {
+        User student = userMapper.selectById(loginUser.getUserId());
+        if (student == null || student.getCollegeId() == null || student.getMajorId() == null) {
+            wrapper.apply("1 = 0");
+            return;
+        }
+
+        List<Long> batchIds = batchMapper.selectList(
+                        new LambdaQueryWrapper<Batch>()
+                                .eq(Batch::getCollegeId, student.getCollegeId())
+                                .eq(Batch::getMajorId, student.getMajorId())
+                                .eq(Batch::getStatus, (byte) 1)
+                )
+                .stream()
+                .map(Batch::getId)
+                .toList();
+        if (batchIds.isEmpty()) {
+            wrapper.apply("1 = 0");
+            return;
+        }
+
+        wrapper.in(Topic::getBatchId, batchIds)
+                .eq(Topic::getStatus, "approved");
     }
 
     /**
@@ -145,12 +190,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         BeanUtils.copyProperties(dto, topic);
         topic.setCreatorId(UserContext.getUserId());
         topic.setCurrentCount(0);
-
-        if ("preset".equals(dto.getSource())) {
-            topic.setStatus("approved");
-        } else {
-            topic.setStatus("pending");
-        }
+        topic.setStatus("pending");
 
         this.save(topic);
         syncTopicCurrent(topic);
@@ -170,6 +210,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         topic.setTitle(dto.getTitle());
         topic.setDescription(dto.getDescription());
         topic.setMaxCapacity(dto.getMaxCapacity());
+        topic.setFilePath(dto.getFilePath());
         this.updateById(topic);
         syncTopicCurrent(topic);
         redisCacheService.delete(CacheKeys.topicDetail(id));
@@ -229,8 +270,8 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         try {
             jdbcTemplate.update("""
                     REPLACE INTO topic_current
-                    (id,batch_id,title,description,source,creator_id,max_capacity,current_count,status,review_comment,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                    (id,batch_id,title,description,source,creator_id,max_capacity,current_count,status,review_comment,file_path,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     topic.getId(),
                     topic.getBatchId(),
@@ -242,6 +283,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
                     topic.getCurrentCount(),
                     topic.getStatus(),
                     topic.getReviewComment(),
+                    topic.getFilePath(),
                     topic.getCreatedAt(),
                     topic.getUpdatedAt()
             );
@@ -259,5 +301,12 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         } catch (Exception e) {
             log.debug("topic_current 未就绪，跳过课题热表删除：{}", e.getMessage());
         }
+    }
+
+    private List<Long> resolveBatchIds(Long batchId, String grade) {
+        if (grade != null && !grade.isBlank()) {
+            return batchService.resolveBatchIdsByGrade(grade);
+        }
+        return batchId != null ? List.of(batchId) : null;
     }
 }

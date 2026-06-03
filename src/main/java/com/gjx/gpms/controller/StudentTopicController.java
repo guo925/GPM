@@ -29,8 +29,9 @@ public class StudentTopicController {
             @RequestParam(defaultValue = "1") long current,
             @RequestParam(defaultValue = "10") long size,
             @RequestParam(required = false) Long batchId,
+            @RequestParam(required = false) String grade,
             @RequestParam(required = false) Long advisorId) {
-        return Result.success(studentTopicService.page(current, size, batchId, advisorId));
+        return Result.success(studentTopicService.page(current, size, batchId, grade, advisorId));
     }
 
     /**

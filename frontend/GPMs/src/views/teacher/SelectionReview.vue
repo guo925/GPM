@@ -3,14 +3,14 @@
     <h3>选题审核</h3>
 
     <el-form inline style="margin-bottom:16px">
-      <el-form-item label="批次">
-        <el-select v-model="batchId" placeholder="请选择批次" @change="onBatchChange" style="width:280px">
-          <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
+      <el-form-item label="年级">
+        <el-select v-model="grade" placeholder="请选择年级" @change="onGradeChange" style="width:280px">
+          <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
         </el-select>
       </el-form-item>
     </el-form>
 
-    <el-tabs v-model="tab" v-if="batchId">
+    <el-tabs v-model="tab" v-if="grade">
       <el-tab-pane label="待审核志愿" name="pending">
         <el-table v-if="pendingList.length" :data="pendingList" border stripe>
           <el-table-column prop="studentName" label="学生" width="100" />
@@ -37,7 +37,7 @@
       </el-tab-pane>
     </el-tabs>
 
-    <el-empty v-else description="请先选择批次" />
+    <el-empty v-else description="请先选择年级" />
 
     <!-- 拒绝弹窗 -->
     <el-dialog v-model="dialog.visible" title="拒绝申请" width="400px">
@@ -54,27 +54,27 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
-import { getBatchPage } from '@/api/batch'
+import { getDistinctGrades } from '@/api/batch'
 import { getReviewList, teacherReview } from '@/api/selection'
 import { getStudentTopicPage } from '@/api/studentTopic'
 
 const authStore = useAuthStore()
-const batchId = ref(null)
-const batches = ref([])
+const grade = ref(null)
+const grades = ref([])
 const pendingList = ref([])
 const assignedList = ref([])
 const tab = ref('pending')
 
 const dialog = reactive({ visible: false, comment: '', loading: false, row: null })
 
-const fetchBatches = async () => {
-  const res = await getBatchPage({ current: 1, size: 50 })
-  batches.value = res.data?.records || res.data || []
+const fetchGrades = async () => {
+  const res = await getDistinctGrades()
+  grades.value = res.data || []
 }
 
-const onBatchChange = async (id) => {
+const onGradeChange = async (g) => {
   const [pRes, aRes] = await Promise.all([
-    getReviewList(id),
+    getReviewList(g),
     getStudentTopicPage({ current: 1, size: 100, advisorId: authStore.user.userId })
   ])
   pendingList.value = (pRes.data || []).filter(r => !r.teacherAction)
@@ -84,7 +84,7 @@ const onBatchChange = async (id) => {
 const review = async (row, action) => {
   await teacherReview({ id: row.id, action })
   ElMessage.success(action === 'approve' ? '已通过' : '已拒绝')
-  await onBatchChange(batchId.value)
+  await onGradeChange(grade.value)
 }
 
 const openReject = (row) => {
@@ -99,7 +99,7 @@ const doReject = async () => {
     await teacherReview({ id: dialog.row.id, action: 'reject', comment: dialog.comment })
     ElMessage.success('已拒绝')
     dialog.visible = false
-    await onBatchChange(batchId.value)
+    await onGradeChange(grade.value)
   } catch {
     ElMessage.error('操作失败')
   } finally {
@@ -107,7 +107,7 @@ const doReject = async () => {
   }
 }
 
-onMounted(fetchBatches)
+onMounted(fetchGrades)
 </script>
 
 <style scoped>

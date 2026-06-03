@@ -15,12 +15,11 @@ public class WorkflowItemDTO {
     private Long id;
 
     private Long batchId;
+    private String grade;
     private String workflowType;
 
-    @NotBlank(message = "学生姓名不能为空")
     private String studentName;
 
-    @NotBlank(message = "学号不能为空")
     private String studentNo;
 
     private String advisorName;

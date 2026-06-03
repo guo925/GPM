@@ -9,6 +9,7 @@ import com.gjx.gpms.dto.DefenseResultDTO;
 import com.gjx.gpms.entity.*;
 import com.gjx.gpms.mapper.*;
 import com.gjx.gpms.security.context.UserContext;
+import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.DefenseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,17 +35,26 @@ public class DefenseServiceImpl implements DefenseService {
     private final DefenseArrangementMapper defenseArrangementMapper;
     private final DefenseResultMapper defenseResultMapper;
     private final BatchMapper batchMapper;
+    private final BatchService batchService;
 
     /**
      * 查询列表batches相关逻辑。
      */
     @Override
-    public List<DefenseBatch> listBatches(Long batchId) {
+    public List<DefenseBatch> listBatches(Long batchId, String grade) {
+        List<Long> batchIds = resolveBatchIds(batchId, grade);
         return defenseBatchMapper.selectList(
                 new LambdaQueryWrapper<DefenseBatch>()
-                        .eq(batchId != null, DefenseBatch::getBatchId, batchId)
+                        .in(batchIds != null && !batchIds.isEmpty(), DefenseBatch::getBatchId, batchIds)
                         .orderByDesc(DefenseBatch::getCreatedAt)
         );
+    }
+
+    private List<Long> resolveBatchIds(Long batchId, String grade) {
+        if (grade != null && !grade.isBlank()) {
+            return batchService.resolveBatchIdsByGrade(grade);
+        }
+        return batchId != null ? List.of(batchId) : null;
     }
 
     /**

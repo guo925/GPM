@@ -25,6 +25,8 @@ public class WorkflowItemController {
 
     private static final String WORKFLOW_ROLES =
             "hasAnyRole('SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER','STUDENT')";
+    private static final String REVIEW_ROLES =
+            "hasAnyRole('SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER')";
 
     private final WorkflowItemService workflowItemService;
 
@@ -34,9 +36,10 @@ public class WorkflowItemController {
     public Result<List<WorkflowItem>> list(
             @RequestParam String workflowType,
             @RequestParam(required = false) Long batchId,
+            @RequestParam(required = false) String grade,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status) {
-        return Result.success(workflowItemService.list(workflowType, batchId, keyword, status));
+        return Result.success(workflowItemService.list(workflowType, batchId, grade, keyword, status));
     }
 
     @Operation(summary = "保存流程事项")
@@ -48,7 +51,7 @@ public class WorkflowItemController {
     }
 
     @Operation(summary = "审核或评分流程事项")
-    @PreAuthorize(WORKFLOW_ROLES)
+    @PreAuthorize(REVIEW_ROLES)
     @PutMapping("/review")
     public Result<Void> review(@Valid @RequestBody WorkflowReviewDTO dto) {
         workflowItemService.review(dto);

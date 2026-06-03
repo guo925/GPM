@@ -224,8 +224,8 @@ const handleSubmitStage = async () => {
     ElMessage.success('提交成功')
     dialog.visible = false
     await fetchData()
-  } catch {
-    ElMessage.error('提交失败')
+  } catch (error) {
+    ElMessage.error(error.message || '提交失败')
   } finally {
     dialog.loading = false
   }

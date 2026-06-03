@@ -19,7 +19,7 @@ public interface TopicService extends IService<Topic> {
     /**
      * 分页查询相关逻辑。
      */
-    IPage<TopicVO> page(long current, long size, Long batchId, String status);
+    IPage<TopicVO> page(long current, long size, Long batchId, String grade, String status);
 
     /**
      * 获取Detail。

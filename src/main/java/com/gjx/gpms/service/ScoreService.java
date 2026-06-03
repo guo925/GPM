@@ -36,5 +36,5 @@ public interface ScoreService extends IService<ScoreSheet> {
     /**
      * 查询列表by batch相关逻辑。
      */
-    List<ScoreSheetVO> listByBatch(Long batchId);
+    List<ScoreSheetVO> listByBatch(Long batchId, String grade);
 }

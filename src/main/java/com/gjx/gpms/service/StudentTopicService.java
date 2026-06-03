@@ -15,7 +15,7 @@ public interface StudentTopicService extends IService<StudentTopic> {
     /**
      * 分页查询相关逻辑。
      */
-    IPage<StudentTopicVO> page(long current, long size, Long batchId, Long advisorId);
+    IPage<StudentTopicVO> page(long current, long size, Long batchId, String grade, Long advisorId);
 
     /**
      * 获取ByStudentId。

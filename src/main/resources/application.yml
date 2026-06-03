@@ -5,6 +5,11 @@ spring:
   config:
     import: optional:file:./application-local.yml
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+
   output:
     ansi:
       enabled: always
@@ -71,7 +76,7 @@ logging:
 # =========================
 file:
   storage:
-    type: ${FILE_STORAGE_TYPE:oss}
+    type: ${FILE_STORAGE_TYPE:local}
     local-path: ./uploads
     local-url-prefix: /uploads
 

@@ -30,4 +30,7 @@ public class TopicCreateDTO {
 
     @Schema(description = "可容纳学生数")
     private Integer maxCapacity;
+
+    @Schema(description = "课题附件路径")
+    private String filePath;
 }

@@ -2,20 +2,20 @@
   <div class="workbench-overview">
     <div class="batch-switch">
       <div>
-        <div class="batch-switch__label">当前届别</div>
-        <div class="batch-switch__name">{{ selectedBatch?.name || '未选择批次' }}</div>
+        <div class="batch-switch__label">当前年级</div>
+        <div class="batch-switch__name">{{ selectedGrade || '未选择年级' }}</div>
       </div>
       <el-select
-        v-model="selectedBatchId"
-        placeholder="请选择届别/批次"
+        v-model="selectedGrade"
+        placeholder="请选择年级"
         style="width: 300px"
-        @change="onBatchChange"
+        @change="onGradeChange"
       >
         <el-option
-          v-for="batch in batches"
-          :key="batch.id"
-          :label="`${batch.grade} - ${batch.name}`"
-          :value="batch.id"
+          v-for="grade in grades"
+          :key="grade"
+          :label="grade + ' 届'"
+          :value="grade"
         />
       </el-select>
     </div>
@@ -67,9 +67,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Checked, Document, EditPen, Files, Finished, Notebook, Reading } from '@element-plus/icons-vue'
 import { getLatestAnnouncements } from '@/api/announcement'
-import { getBatchDetail, getBatchPage, getCurrentBatch } from '@/api/batch'
+import { getBatchDetail, getBatchPage, getCurrentBatch, getDistinctGrades } from '@/api/batch'
 import { getFeatureItems } from '@/api/workflow'
-import { getSelectedBatchId, setSelectedBatchId, withSelectedBatchQuery } from '@/utils/batchContext'
+import { getSelectedGrade, setSelectedGrade, withSelectedGradeQuery } from '@/utils/batchContext'
 
 const router = useRouter()
 
@@ -79,9 +79,8 @@ const progressLoading = ref(false)
 const notices = ref([])
 const todos = ref([])
 const stages = ref([])
-const batches = ref([])
-const selectedBatchId = ref(getSelectedBatchId())
-const selectedBatch = computed(() => batches.value.find(item => item.id === selectedBatchId.value) || null)
+const grades = ref([])
+const selectedGrade = ref(getSelectedGrade())
 
 const workflowTasks = [
   { key: 'taskBook', apiBase: '/thesis/task-book', title: '任务书审核', path: '/thesis/task-book' },
@@ -132,8 +131,8 @@ const loadTodos = async () => {
   try {
     const results = await Promise.all(workflowTasks.map(async task => {
       const [pendingRes, rejectedRes] = await Promise.all([
-        getFeatureItems(task.apiBase, { batchId: selectedBatchId.value || undefined, status: 'pending' }),
-        getFeatureItems(task.apiBase, { batchId: selectedBatchId.value || undefined, status: 'rejected' })
+        getFeatureItems(task.apiBase, { grade: selectedGrade.value || undefined, status: 'pending' }),
+        getFeatureItems(task.apiBase, { grade: selectedGrade.value || undefined, status: 'rejected' })
       ])
       const pending = pendingRes.data?.length || 0
       const rejected = rejectedRes.data?.length || 0
@@ -148,7 +147,7 @@ const loadTodos = async () => {
         desc: `${item.pending} 条待处理，${item.rejected} 条退回待修改`,
         status: item.pending > 0 ? '待处理' : '需修改',
         type: item.pending > 0 ? 'warning' : 'danger',
-        to: withSelectedBatchQuery(item.path, selectedBatchId.value)
+        to: withSelectedGradeQuery(item.path, selectedGrade.value)
       }))
   } finally {
     todoLoading.value = false
@@ -168,7 +167,7 @@ const parseStageConfig = (configText) => {
 const loadProgress = async () => {
   progressLoading.value = true
   try {
-    const res = selectedBatchId.value ? await getBatchDetail(selectedBatchId.value) : await getCurrentBatch()
+    const res = await getCurrentBatch()
     const currentStage = res.data?.currentStage || 'topic_selection'
     const config = parseStageConfig(res.data?.config)
     const currentIndex = stageTemplates.findIndex(item => item.key === currentStage)
@@ -184,23 +183,22 @@ const loadProgress = async () => {
   }
 }
 
-const loadBatches = async () => {
-  const res = await getBatchPage({ current: 1, size: 100 })
-  batches.value = res.data?.records || []
-  if (!selectedBatchId.value) {
-    const current = batches.value.find(item => Number(item.status) === 1) || batches.value[0]
-    selectedBatchId.value = current?.id || null
-    setSelectedBatchId(selectedBatchId.value)
+const loadGrades = async () => {
+  const res = await getDistinctGrades()
+  grades.value = res.data || []
+  if (!selectedGrade.value && grades.value.length > 0) {
+    selectedGrade.value = grades.value[0]
+    setSelectedGrade(selectedGrade.value)
   }
 }
 
-const onBatchChange = async () => {
-  setSelectedBatchId(selectedBatchId.value)
+const onGradeChange = async () => {
+  setSelectedGrade(selectedGrade.value)
   await Promise.all([loadTodos(), loadProgress()])
 }
 
 onMounted(async () => {
-  await loadBatches()
+  await loadGrades()
   loadNotices()
   loadTodos()
   loadProgress()

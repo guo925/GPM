@@ -16,13 +16,18 @@ import com.gjx.gpms.mapper.BatchMapper;
 import com.gjx.gpms.mapper.CollegeMapper;
 import com.gjx.gpms.mapper.MajorMapper;
 import com.gjx.gpms.security.context.UserContext;
+import com.gjx.gpms.security.model.LoginUser;
 import com.gjx.gpms.service.BatchService;
+import com.gjx.gpms.system.entity.User;
+import com.gjx.gpms.system.mapper.UserMapper;
 import com.gjx.gpms.vo.BatchVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.time.Duration;
 import java.util.stream.Collectors;
@@ -40,6 +45,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
     private final CollegeMapper collegeMapper;
     private final MajorMapper majorMapper;
     private final RedisCacheService redisCacheService;
+    private final UserMapper userMapper;
 
     /**
      * 分页查询相关逻辑。
@@ -51,6 +57,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         LambdaQueryWrapper<Batch> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(name != null, Batch::getName, name);
         wrapper.eq(status != null, Batch::getStatus, status);
+        applyStudentScope(wrapper);
         wrapper.orderByDesc(Batch::getCreatedAt);
 
         Page<Batch> batchPage = this.page(page, wrapper);
@@ -75,6 +82,25 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         }).collect(Collectors.toList()));
 
         return voPage;
+    }
+
+    private void applyStudentScope(LambdaQueryWrapper<Batch> wrapper) {
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser == null
+                || loginUser.getRoleCodes() == null
+                || !loginUser.getRoleCodes().contains("STUDENT")) {
+            return;
+        }
+
+        User student = userMapper.selectById(loginUser.getUserId());
+        if (student == null || student.getCollegeId() == null || student.getMajorId() == null) {
+            wrapper.apply("1 = 0");
+            return;
+        }
+
+        wrapper.eq(Batch::getCollegeId, student.getCollegeId())
+                .eq(Batch::getMajorId, student.getMajorId())
+                .eq(Batch::getStatus, (byte) 1);
     }
 
     /**
@@ -200,5 +226,31 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         vo.setStudentMaxChoices(batch.getStudentMaxChoices() == null ? null : batch.getStudentMaxChoices().intValue());
         vo.setAllowTeacherReject(batch.getAllowTeacherReject() == null ? null : batch.getAllowTeacherReject().intValue());
         vo.setStatus(batch.getStatus() == null ? null : batch.getStatus().intValue());
+    }
+
+    @Override
+    public List<Long> resolveBatchIdsByGrade(String grade) {
+        if (grade == null || grade.isBlank()) {
+            return Collections.emptyList();
+        }
+        return this.list(new LambdaQueryWrapper<Batch>()
+                .eq(Batch::getGrade, grade)
+                .select(Batch::getId))
+                .stream()
+                .map(Batch::getId)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> getDistinctGrades() {
+        return this.list(new LambdaQueryWrapper<Batch>()
+                .select(Batch::getGrade)
+                .groupBy(Batch::getGrade)
+                .orderByDesc(Batch::getGrade))
+                .stream()
+                .map(Batch::getGrade)
+                .filter(g -> g != null && !g.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

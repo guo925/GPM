@@ -71,7 +71,8 @@ public class ScoreController {
      */
     @Operation(summary = "批次成绩列表")
     @GetMapping("/batch/{batchId}")
-    public Result<List<ScoreSheetVO>> listByBatch(@PathVariable Long batchId) {
-        return Result.success(scoreService.listByBatch(batchId));
+    public Result<List<ScoreSheetVO>> listByBatch(@PathVariable Long batchId,
+                                                   @RequestParam(required = false) String grade) {
+        return Result.success(scoreService.listByBatch(batchId, grade));
     }
 }
