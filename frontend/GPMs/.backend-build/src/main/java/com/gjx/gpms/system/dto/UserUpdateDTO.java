@@ -32,6 +32,12 @@ public class UserUpdateDTO {
     @Schema(description = "邮箱")
     private String email;
 
+    @Schema(description = "学号")
+    private String studentNo;
+
+    @Schema(description = "年级")
+    private String grade;
+
     @Schema(description = "所属学院ID")
     private Long collegeId;
 

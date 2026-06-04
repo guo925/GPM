@@ -129,7 +129,23 @@
           </el-col>
         </el-row>
         <el-form-item label="时间节点配置">
-          <el-input v-model="form.config" type="textarea" :rows="4" placeholder='JSON格式，如: {"topic_start":"2026-09-01","topic_end":"2026-09-20"}' />
+          <div class="stage-time-list">
+            <div v-for="s in stageOptionsForTime" :key="s.value" class="stage-time-row">
+              <span class="stage-time-label">{{ s.label }}</span>
+              <el-date-picker
+                v-model="form.stageTimes[s.value].start"
+                type="datetime"
+                placeholder="开始时间"
+                value-format="YYYY-MM-DD HH:mm:ss"
+              />
+              <el-date-picker
+                v-model="form.stageTimes[s.value].end"
+                type="datetime"
+                placeholder="结束时间"
+                value-format="YYYY-MM-DD HH:mm:ss"
+              />
+            </div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -201,6 +217,35 @@ const stageOptions = [
   { label: '成绩审核', value: 'score_review' },
   { label: '已完成', value: 'completed' }
 ]
+const stageOptionsForTime = stageOptions.filter(item => item.value !== 'completed')
+
+const createStageTimes = () => Object.fromEntries(
+  stageOptionsForTime.map(item => [item.value, { start: '', end: '' }])
+)
+
+const parseStageTimes = (configText) => {
+  const stageTimes = createStageTimes()
+  if (!configText) return stageTimes
+  try {
+    const parsed = JSON.parse(configText)
+    const config = parsed.stages || parsed
+    stageOptionsForTime.forEach(item => {
+      stageTimes[item.value].start = config[`${item.value}_start`] || config[`${item.value}Start`] || ''
+      stageTimes[item.value].end = config[`${item.value}_end`] || config[`${item.value}End`] || ''
+    })
+  } catch {}
+  return stageTimes
+}
+
+const stringifyStageTimes = (stageTimes) => {
+  const config = {}
+  stageOptionsForTime.forEach(item => {
+    const time = stageTimes[item.value] || {}
+    if (time.start) config[`${item.value}_start`] = time.start
+    if (time.end) config[`${item.value}_end`] = time.end
+  })
+  return JSON.stringify(config)
+}
 
 const loading = ref(false)
 const tableData = ref([])
@@ -218,7 +263,7 @@ const allMajors = ref([])
 const form = ref({
   name: '', grade: '', collegeId: null, majorId: null,
   maxStudentPerTeacher: 5, studentMaxChoices: 3,
-  selectionMode: 'voluntary', allowTeacherReject: 1, rejectStrategy: 'pool', config: ''
+  selectionMode: 'voluntary', allowTeacherReject: 1, rejectStrategy: 'pool', stageTimes: createStageTimes()
 })
 const rules = {
   name: [{ required: true, message: '请输入批次名称', trigger: 'blur' }],
@@ -259,7 +304,7 @@ const handleAdd = () => {
   form.value = {
     name: '', grade: '', collegeId: null, majorId: null,
     maxStudentPerTeacher: 5, studentMaxChoices: 3,
-    selectionMode: 'voluntary', allowTeacherReject: 1, rejectStrategy: 'pool', config: ''
+    selectionMode: 'voluntary', allowTeacherReject: 1, rejectStrategy: 'pool', stageTimes: createStageTimes()
   }
   dialogVisible.value = true
 }
@@ -275,7 +320,7 @@ const handleEdit = (row) => {
     selectionMode: row.selectionMode,
     allowTeacherReject: row.allowTeacherReject,
     rejectStrategy: row.rejectStrategy,
-    config: row.config
+    stageTimes: parseStageTimes(row.config)
   }
   dialogVisible.value = true
 }
@@ -308,11 +353,16 @@ const handleDelete = async (row) => {
 
 const handleSubmit = async () => {
   await formRef.value.validate()
+  const payload = {
+    ...form.value,
+    config: stringifyStageTimes(form.value.stageTimes)
+  }
+  delete payload.stageTimes
   if (isEdit.value) {
-    await updateBatch({ id: editId.value, ...form.value })
+    await updateBatch({ id: editId.value, ...payload })
     ElMessage.success('修改成功')
   } else {
-    await createBatch(form.value)
+    await createBatch(payload)
     ElMessage.success('新增成功')
   }
   dialogVisible.value = false
@@ -326,3 +376,23 @@ onMounted(async () => {
   loadData()
 })
 </script>
+
+<style scoped>
+.stage-time-list {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.stage-time-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.stage-time-label {
+  color: #606266;
+  font-size: 13px;
+}
+</style>

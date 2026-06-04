@@ -29,9 +29,10 @@
             <el-input v-model="query.keyword" clearable placeholder="学生、题目、导师" style="width:220px" />
           </el-form-item>
           <el-form-item label="年级">
-            <el-select v-model="query.grade" placeholder="全部年级" clearable style="width:240px" @change="onGradeChange">
+            <el-select v-if="!isStudent" v-model="query.grade" placeholder="全部年级" clearable style="width:240px" @change="onGradeChange">
               <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
             </el-select>
+            <el-input v-else :model-value="query.grade ? `${query.grade} 届` : '未配置年级'" disabled style="width:240px" />
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="query.status" clearable placeholder="全部状态" style="width:140px">
@@ -237,7 +238,7 @@ const statusOptions = computed(() => {
 
 const batches = ref([])
 const grades = ref([])
-const routeGrade = () => route.query.grade || getSelectedGrade()
+const routeGrade = () => isStudent.value ? (authStore.user?.grade || '') : (route.query.grade || getSelectedGrade())
 const query = reactive({ keyword: '', status: '', grade: routeGrade() })
 const state = reactive({ rows: [] })
 const formDialog = reactive({ visible: false, mode: 'create', title: '新增', uploading: false, form: {} })
@@ -294,6 +295,9 @@ const resetQuery = () => {
 }
 
 const onGradeChange = () => {
+  if (isStudent.value) {
+    query.grade = authStore.user?.grade || ''
+  }
   setSelectedGrade(query.grade)
   loadRows()
 }
@@ -433,8 +437,11 @@ onMounted(async () => {
     getDistinctGrades(),
     getBatchPage({ current: 1, size: 100 })
   ])
-  grades.value = gradeRes.data || []
+  grades.value = isStudent.value && authStore.user?.grade ? [authStore.user.grade] : (gradeRes.data || [])
   batches.value = batchRes.data?.records || []
+  if (isStudent.value && query.grade) {
+    setSelectedGrade(query.grade)
+  }
   if (!query.grade && grades.value.length > 0) {
     query.grade = grades.value[0]
     setSelectedGrade(query.grade)

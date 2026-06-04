@@ -1,6 +1,10 @@
 package com.gjx.gpms.security.service;
 
 import com.gjx.gpms.common.exception.BusinessException;
+import com.gjx.gpms.entity.College;
+import com.gjx.gpms.entity.Major;
+import com.gjx.gpms.mapper.CollegeMapper;
+import com.gjx.gpms.mapper.MajorMapper;
 import com.gjx.gpms.security.model.LoginUser;
 import com.gjx.gpms.system.entity.User;
 import com.gjx.gpms.system.mapper.PermissionMapper;
@@ -28,6 +32,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final UserMapper userMapper;
 
     private final PermissionMapper permissionMapper;
+
+    private final CollegeMapper collegeMapper;
+
+    private final MajorMapper majorMapper;
 
     /**
      * 加载用户信息
@@ -74,6 +82,26 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         loginUser.setUserId(user.getId());
 
         loginUser.setUsername(user.getUsername());
+
+        loginUser.setRealName(user.getRealName());
+
+        loginUser.setStudentNo(user.getStudentNo());
+
+        loginUser.setGrade(user.getGrade());
+
+        loginUser.setCollegeId(user.getCollegeId());
+
+        loginUser.setMajorId(user.getMajorId());
+
+        if (user.getCollegeId() != null) {
+            College college = collegeMapper.selectById(user.getCollegeId());
+            loginUser.setCollegeName(college == null ? "" : college.getName());
+        }
+
+        if (user.getMajorId() != null) {
+            Major major = majorMapper.selectById(user.getMajorId());
+            loginUser.setMajorName(major == null ? "" : major.getName());
+        }
 
         loginUser.setPassword(user.getPassword());
 

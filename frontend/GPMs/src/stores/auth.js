@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginApi, logout as logoutApi } from '@/api/auth'
+import { login as loginApi, logout as logoutApi, me as meApi } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 
 const ROLE_DASHBOARD_MAP = {
@@ -39,15 +39,50 @@ export const useAuthStore = defineStore('auth', {
     isSuperAdmin: (state) => (state.user?.roles || []).includes('SUPER_ADMIN')
   },
   actions: {
+    setAuthData(data) {
+      const {
+        token,
+        userId,
+        username,
+        realName,
+        studentNo,
+        grade,
+        collegeId,
+        collegeName,
+        majorId,
+        majorName,
+        roles,
+        permissions
+      } = data
+      if (token) {
+        this.token = token
+        sessionStorage.setItem('token', token)
+      }
+      this.user = {
+        userId,
+        username,
+        realName,
+        studentNo,
+        grade,
+        collegeId,
+        collegeName,
+        majorId,
+        majorName,
+        roles: roles || [],
+        permissions: permissions || []
+      }
+      sessionStorage.setItem('user', JSON.stringify(this.user))
+    },
     async login(loginForm) {
       const res = await loginApi(loginForm)
-      const { token, userId, username, roles, permissions } = res.data
-      this.token = token
-      this.user = { userId, username, roles: roles || [], permissions: permissions || [] }
-      sessionStorage.setItem('token', token)
-      sessionStorage.setItem('user', JSON.stringify(this.user))
+      this.setAuthData(res.data)
       ElMessage.success('登录成功')
       return true
+    },
+    async refreshUser() {
+      if (!this.token) return
+      const res = await meApi()
+      this.setAuthData({ ...res.data, token: this.token })
     },
     async logout() {
       try { await logoutApi() } catch {}

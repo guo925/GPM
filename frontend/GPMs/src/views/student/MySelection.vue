@@ -21,10 +21,8 @@
       <el-card style="margin-bottom:16px">
         <template #header>提交选题志愿</template>
         <el-form :model="form" label-width="80px">
-          <el-form-item label="选择年级">
-            <el-select v-model="form.grade" placeholder="请选择年级" @change="onGradeChange" style="width:300px">
-              <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
-            </el-select>
+          <el-form-item label="年级">
+            <el-input :model-value="studentGradeLabel" disabled style="width:300px" />
           </el-form-item>
           <el-form-item label="选择课题">
             <el-checkbox-group v-model="form.topicIds" :max="3">
@@ -35,6 +33,7 @@
               </div>
             </el-checkbox-group>
             <div v-if="topics.length === 0 && form.grade" style="color:#909399">该年级暂无可选课题</div>
+            <div v-if="!form.grade" style="color:#f56c6c">当前账号未配置年级，无法选题</div>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :disabled="!canSubmit" :loading="submitting" @click="handleSubmit">
@@ -70,12 +69,12 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getMyTopic } from '@/api/studentTopic'
 import { getMySelections, submitPreferences } from '@/api/selection'
-import { getDistinctGrades, getBatchesByGrade } from '@/api/batch'
 import { getTopicPage } from '@/api/topic'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const myTopic = ref(null)
 const mySelections = ref([])
-const grades = ref([])
 const topics = ref([])
 const submitting = ref(false)
 
@@ -85,6 +84,7 @@ const form = reactive({
 })
 
 const canSubmit = computed(() => form.grade && form.topicIds.length > 0)
+const studentGradeLabel = computed(() => form.grade ? `${form.grade} 届` : '未配置')
 
 const fetchData = async () => {
   const topicRes = await getMyTopic()
@@ -92,11 +92,13 @@ const fetchData = async () => {
     myTopic.value = topicRes.data
     return
   }
-  const gradeRes = await getDistinctGrades()
-  grades.value = gradeRes.data || []
+  form.grade = authStore.user?.grade || null
+  if (form.grade) {
+    await loadGradeData(form.grade)
+  }
 }
 
-const onGradeChange = async (grade) => {
+const loadGradeData = async (grade) => {
   form.topicIds = []
   const res = await getTopicPage({ current: 1, size: 100, grade, status: 'approved' })
   topics.value = res.data?.records || res.data || []
@@ -114,8 +116,8 @@ const handleSubmit = async () => {
     })
     ElMessage.success('选题请求已提交，正在处理中')
     form.topicIds = []
-    await onGradeChange(form.grade)
-    setTimeout(() => onGradeChange(form.grade), 1500)
+    await loadGradeData(form.grade)
+    setTimeout(() => loadGradeData(form.grade), 1500)
   } catch (error) {
     ElMessage.error(error.message || '提交失败')
   } finally {

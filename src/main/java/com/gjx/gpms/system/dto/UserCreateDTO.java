@@ -3,6 +3,8 @@ package com.gjx.gpms.system.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 用户新增DTO
  */
@@ -58,6 +60,16 @@ public class UserCreateDTO {
     private String email;
 
     /**
+     * 学号
+     */
+    private String studentNo;
+
+    /**
+     * 年级
+     */
+    private String grade;
+
+    /**
      * 所属学院ID
      */
     private Long collegeId;
@@ -66,4 +78,9 @@ public class UserCreateDTO {
      * 所属专业ID
      */
     private Long majorId;
+
+    /**
+     * 角色ID列表
+     */
+    private List<Long> roleIds;
 }

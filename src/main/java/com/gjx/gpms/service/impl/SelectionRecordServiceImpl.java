@@ -73,6 +73,7 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         if (batch == null) {
             throw new BusinessException("批次不存在");
         }
+        validateStudentBatchScope(studentId, batch);
 
         Long activeTopicCount = studentTopicMapper.selectCount(
                 new LambdaQueryWrapper<StudentTopic>()
@@ -106,6 +107,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
             Topic topic = topicMapper.selectById(topicId);
             if (topic == null || !"approved".equals(topic.getStatus())) {
                 throw new BusinessException("课题[" + topicId + "]不存在或未审核通过");
+            }
+            if (!dto.getBatchId().equals(topic.getBatchId())) {
+                throw new BusinessException("课题[" + topicId + "]不属于当前批次");
             }
         }
 
@@ -145,6 +149,21 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         }
 
         log.info("学生[{}]提交选题请求已进入异步队列，共{}个志愿", studentId, dto.getTopicIds().size());
+    }
+
+    private void validateStudentBatchScope(Long studentId, Batch batch) {
+        User student = userMapper.selectById(studentId);
+        if (student == null) {
+            throw new BusinessException("学生不存在");
+        }
+        if (student.getCollegeId() == null || student.getMajorId() == null || student.getGrade() == null || student.getGrade().isBlank()) {
+            throw new BusinessException("学生年级、学院、专业信息不完整，无法提交选题");
+        }
+        if (!student.getCollegeId().equals(batch.getCollegeId())
+                || !student.getMajorId().equals(batch.getMajorId())
+                || !student.getGrade().equals(batch.getGrade())) {
+            throw new BusinessException("只能提交本人年级、学院、专业对应批次的选题志愿");
+        }
     }
 
     private void saveSelectionRecords(Long batchId, Long studentId, List<Long> topicIds) {

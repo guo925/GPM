@@ -80,6 +80,13 @@ public class AuthController {
         LoginVO vo = new LoginVO();
         vo.setUserId(loginUser.getUserId());
         vo.setUsername(loginUser.getUsername());
+        vo.setRealName(loginUser.getRealName());
+        vo.setStudentNo(loginUser.getStudentNo());
+        vo.setGrade(loginUser.getGrade());
+        vo.setCollegeId(loginUser.getCollegeId());
+        vo.setCollegeName(loginUser.getCollegeName());
+        vo.setMajorId(loginUser.getMajorId());
+        vo.setMajorName(loginUser.getMajorName());
         vo.setRoles(roles);
         vo.setPermissions(loginUser.getPermissionCodes());
         return Result.success(vo);

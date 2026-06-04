@@ -93,13 +93,15 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         }
 
         User student = userMapper.selectById(loginUser.getUserId());
-        if (student == null || student.getCollegeId() == null || student.getMajorId() == null) {
+        if (student == null || student.getCollegeId() == null || student.getMajorId() == null
+                || student.getGrade() == null || student.getGrade().isBlank()) {
             wrapper.apply("1 = 0");
             return;
         }
 
         wrapper.eq(Batch::getCollegeId, student.getCollegeId())
                 .eq(Batch::getMajorId, student.getMajorId())
+                .eq(Batch::getGrade, student.getGrade())
                 .eq(Batch::getStatus, (byte) 1);
     }
 
@@ -112,6 +114,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         if (b == null) {
             throw new BusinessException("批次不存在");
         }
+        checkStudentBatchAccess(b);
 
         College college = collegeMapper.selectById(b.getCollegeId());
         Major major = majorMapper.selectById(b.getMajorId());
@@ -124,11 +127,35 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         return vo;
     }
 
+    private void checkStudentBatchAccess(Batch batch) {
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser == null
+                || loginUser.getRoleCodes() == null
+                || !loginUser.getRoleCodes().contains("STUDENT")) {
+            return;
+        }
+        User student = userMapper.selectById(loginUser.getUserId());
+        if (student == null
+                || !batch.getCollegeId().equals(student.getCollegeId())
+                || !batch.getMajorId().equals(student.getMajorId())
+                || !batch.getGrade().equals(student.getGrade())) {
+            throw new BusinessException("无权查看该批次");
+        }
+    }
+
     /**
      * 获取CurrentBatch。
      */
     @Override
     public BatchVO getCurrentBatch() {
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser != null && loginUser.getRoleCodes() != null && loginUser.getRoleCodes().contains("STUDENT")) {
+            LambdaQueryWrapper<Batch> wrapper = new LambdaQueryWrapper<Batch>()
+                    .eq(Batch::getStatus, (byte) 1);
+            applyStudentScope(wrapper);
+            Batch current = this.getOne(wrapper.orderByDesc(Batch::getCreatedAt).last("LIMIT 1"));
+            return current == null ? null : getDetail(current.getId());
+        }
         return redisCacheService.getOrLoad(
                 CacheKeys.BATCH_CURRENT,
                 BatchVO.class,
@@ -233,6 +260,21 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         if (grade == null || grade.isBlank()) {
             return Collections.emptyList();
         }
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser != null && loginUser.getRoleCodes() != null && loginUser.getRoleCodes().contains("STUDENT")) {
+            User student = userMapper.selectById(loginUser.getUserId());
+            if (student == null || !grade.equals(student.getGrade())) {
+                return Collections.emptyList();
+            }
+            return this.list(new LambdaQueryWrapper<Batch>()
+                    .eq(Batch::getGrade, student.getGrade())
+                    .eq(Batch::getCollegeId, student.getCollegeId())
+                    .eq(Batch::getMajorId, student.getMajorId())
+                    .select(Batch::getId))
+                    .stream()
+                    .map(Batch::getId)
+                    .collect(Collectors.toList());
+        }
         return this.list(new LambdaQueryWrapper<Batch>()
                 .eq(Batch::getGrade, grade)
                 .select(Batch::getId))
@@ -243,6 +285,13 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
 
     @Override
     public List<String> getDistinctGrades() {
+        LoginUser loginUser = UserContext.getLoginUser();
+        if (loginUser != null && loginUser.getRoleCodes() != null && loginUser.getRoleCodes().contains("STUDENT")) {
+            User student = userMapper.selectById(loginUser.getUserId());
+            return student != null && student.getGrade() != null && !student.getGrade().isBlank()
+                    ? List.of(student.getGrade())
+                    : Collections.emptyList();
+        }
         return this.list(new LambdaQueryWrapper<Batch>()
                 .select(Batch::getGrade)
                 .groupBy(Batch::getGrade)

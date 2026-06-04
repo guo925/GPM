@@ -5,9 +5,11 @@ import com.gjx.gpms.common.exception.BusinessException;
 import com.gjx.gpms.dto.WorkflowItemDTO;
 import com.gjx.gpms.dto.WorkflowReviewDTO;
 import com.gjx.gpms.entity.Batch;
+import com.gjx.gpms.entity.ProcessInstance;
 import com.gjx.gpms.entity.StudentTopic;
 import com.gjx.gpms.entity.WorkflowItem;
 import com.gjx.gpms.mapper.BatchMapper;
+import com.gjx.gpms.mapper.ProcessInstanceMapper;
 import com.gjx.gpms.mapper.StudentTopicMapper;
 import com.gjx.gpms.mapper.WorkflowItemMapper;
 import com.gjx.gpms.security.context.UserContext;
@@ -38,6 +40,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
     private final UserMapper userMapper;
     private final StudentTopicMapper studentTopicMapper;
     private final BatchMapper batchMapper;
+    private final ProcessInstanceMapper processInstanceMapper;
 
     @Override
     @Transactional
@@ -74,7 +77,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
             return;
         }
         if (loginUser.getRoleCodes().contains("STUDENT")) {
-            wrapper.eq(WorkflowItem::getStudentName, currentUser.getRealName());
+            wrapper.eq(WorkflowItem::getStudentNo, resolveStudentNo(currentUser));
         } else if (loginUser.getRoleCodes().contains("TEACHER")) {
             applyTeacherScope(wrapper, loginUser.getUserId());
         }
@@ -132,6 +135,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
         } else {
             workflowItemMapper.updateById(item);
         }
+        syncProcessInstance(item);
     }
 
     private void fillCurrentStudentInfo(WorkflowItem item, WorkflowItemDTO dto) {
@@ -144,7 +148,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
             return;
         }
         item.setStudentName(StringUtils.hasText(student.getRealName()) ? student.getRealName() : student.getUsername());
-        item.setStudentNo(student.getUsername());
+        item.setStudentNo(resolveStudentNo(student));
 
         StudentTopic relation = studentTopicMapper.selectOne(
                 new LambdaQueryWrapper<StudentTopic>()
@@ -164,7 +168,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
         }
 
         if (item.getBatchId() == null) {
-            item.setBatchId(resolveBatchId(dto.getGrade()));
+            item.setBatchId(resolveStudentBatchId(student));
         }
     }
 
@@ -183,6 +187,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
         item.setUpdatedBy(UserContext.getUserId());
         item.setUpdatedAt(LocalDateTime.now());
         workflowItemMapper.updateById(item);
+        syncProcessInstance(item);
     }
 
     @Override
@@ -193,6 +198,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
         }
         checkOwnership(item);
         workflowItemMapper.deleteById(id);
+        deleteSyncedProcessInstance(item);
     }
 
     private void checkOwnership(WorkflowItem item) {
@@ -205,7 +211,7 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
             return;
         }
         if (loginUser.getRoleCodes().contains("STUDENT")
-                && !currentUser.getRealName().equals(item.getStudentName())) {
+                && !resolveStudentNo(currentUser).equals(item.getStudentNo())) {
             throw new BusinessException("无权操作他人的论文记录");
         }
         if (loginUser.getRoleCodes().contains("TEACHER")) {
@@ -243,6 +249,158 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
             return batchIds.get(0);
         }
         return null;
+    }
+
+    private Long resolveStudentBatchId(User student) {
+        if (student.getCollegeId() == null || student.getMajorId() == null
+                || !StringUtils.hasText(student.getGrade())) {
+            return null;
+        }
+        Batch batch = batchMapper.selectOne(
+                new LambdaQueryWrapper<Batch>()
+                        .eq(Batch::getCollegeId, student.getCollegeId())
+                        .eq(Batch::getMajorId, student.getMajorId())
+                        .eq(Batch::getGrade, student.getGrade())
+                        .eq(Batch::getStatus, (byte) 1)
+                        .orderByDesc(Batch::getUpdatedAt)
+                        .last("LIMIT 1")
+        );
+        return batch == null ? null : batch.getId();
+    }
+
+    private String resolveStudentNo(User student) {
+        return StringUtils.hasText(student.getStudentNo()) ? student.getStudentNo() : student.getUsername();
+    }
+
+    private void syncProcessInstance(WorkflowItem item) {
+        String stage = toProcessStage(item.getWorkflowType());
+        if (!StringUtils.hasText(stage)) {
+            return;
+        }
+
+        StudentTopic studentTopic = resolveStudentTopic(item);
+        if (studentTopic == null) {
+            return;
+        }
+
+        if ("draft".equals(item.getStatus())) {
+            deleteSyncedProcessInstance(item);
+            return;
+        }
+
+        ProcessInstance process = processInstanceMapper.selectOne(
+                new LambdaQueryWrapper<ProcessInstance>()
+                        .eq(ProcessInstance::getStudentTopicId, studentTopic.getId())
+                        .eq(ProcessInstance::getStage, stage)
+                        .last("LIMIT 1")
+        );
+        boolean isNew = process == null;
+        if (isNew) {
+            process = new ProcessInstance();
+            process.setStudentTopicId(studentTopic.getId());
+            process.setStage(stage);
+            process.setVersion(1);
+            process.setCreatedAt(LocalDateTime.now());
+            process.setIsEditable((byte) 0);
+        } else {
+            process.setVersion(process.getVersion() == null ? 1 : process.getVersion() + 1);
+        }
+
+        process.setStatus(toProcessStatus(item.getStatus()));
+        process.setSubmitterId(item.getUpdatedBy() != null ? item.getUpdatedBy() : item.getCreatedBy());
+        process.setSubmittedAt(item.getUpdatedAt() != null ? item.getUpdatedAt() : item.getCreatedAt());
+        process.setContent(buildProcessContent(item));
+        process.setFilePath(resolveFilePath(item));
+        process.setReviewComment(item.getComment());
+        process.setUpdatedAt(LocalDateTime.now());
+        process.setReviewedAt("approved".equals(process.getStatus()) || "rejected".equals(process.getStatus()) ? LocalDateTime.now() : null);
+        process.setReviewerId("approved".equals(process.getStatus()) || "rejected".equals(process.getStatus()) ? UserContext.getUserId() : null);
+        process.setIsEditable("rejected".equals(process.getStatus()) ? (byte) 1 : (byte) 0);
+
+        if (isNew) {
+            processInstanceMapper.insert(process);
+        } else {
+            processInstanceMapper.updateById(process);
+        }
+    }
+
+    private void deleteSyncedProcessInstance(WorkflowItem item) {
+        String stage = toProcessStage(item.getWorkflowType());
+        if (!StringUtils.hasText(stage)) {
+            return;
+        }
+        StudentTopic studentTopic = resolveStudentTopic(item);
+        if (studentTopic == null) {
+            return;
+        }
+        processInstanceMapper.delete(
+                new LambdaQueryWrapper<ProcessInstance>()
+                        .eq(ProcessInstance::getStudentTopicId, studentTopic.getId())
+                        .eq(ProcessInstance::getStage, stage)
+        );
+    }
+
+    private StudentTopic resolveStudentTopic(WorkflowItem item) {
+        if (!StringUtils.hasText(item.getStudentNo())) {
+            return null;
+        }
+        User student = userMapper.selectOne(
+                new LambdaQueryWrapper<User>()
+                        .and(wrapper -> wrapper
+                                .eq(User::getStudentNo, item.getStudentNo())
+                                .or()
+                                .eq(User::getUsername, item.getStudentNo()))
+                        .last("LIMIT 1")
+        );
+        if (student == null) {
+            return null;
+        }
+        LambdaQueryWrapper<StudentTopic> wrapper = new LambdaQueryWrapper<StudentTopic>()
+                .eq(StudentTopic::getStudentId, student.getId())
+                .eq(StudentTopic::getStatus, "active")
+                .orderByDesc(StudentTopic::getAllocationTime)
+                .orderByDesc(StudentTopic::getCreatedAt)
+                .last("LIMIT 1");
+        if (item.getBatchId() != null) {
+            wrapper.eq(StudentTopic::getBatchId, item.getBatchId());
+        }
+        return studentTopicMapper.selectOne(wrapper);
+    }
+
+    private String toProcessStage(String workflowType) {
+        return switch (workflowType) {
+            case "taskBook" -> "task_book";
+            case "openingReport" -> "opening_report";
+            case "openingDefense" -> "opening_defense";
+            case "weeklyLog", "thesisGuidance" -> "guidance_week";
+            case "midterm" -> "midterm_check";
+            case "postDefenseRevision" -> "post_defense_modify";
+            case "finalThesis", "finalDesign" -> "thesis_final";
+            default -> null;
+        };
+    }
+
+    private String toProcessStatus(String status) {
+        if ("approved".equals(status) || "rejected".equals(status)) {
+            return status;
+        }
+        return "submitted";
+    }
+
+    private String buildProcessContent(WorkflowItem item) {
+        return java.util.stream.Stream.of(item.getTitle(), item.getExtra(), item.getRemark())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("\n"));
+    }
+
+    private String resolveFilePath(WorkflowItem item) {
+        String extra = item.getExtra();
+        if (!StringUtils.hasText(extra)) {
+            return null;
+        }
+        return extra.startsWith("/uploads") || extra.startsWith("http") || extra.contains("/uploads/")
+                ? extra
+                : null;
     }
 
 }

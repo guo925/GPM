@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.time.Duration;
 import java.util.stream.Collectors;
@@ -69,15 +70,9 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         voPage.setCurrent(batchPage.getCurrent());
         voPage.setSize(batchPage.getSize());
         voPage.setTotal(batchPage.getTotal());
-        voPage.setRecords(batchPage.getRecords().stream().map(b -> {
-            BatchVO vo = new BatchVO();
-            BeanUtils.copyProperties(b, vo);
-            fillByteFields(b, vo);
-            vo.setCollegeName(collegeMap.getOrDefault(b.getCollegeId(), ""));
-            vo.setMajorName(majorMap.getOrDefault(b.getMajorId(), ""));
-            vo.setCurrentStage(b.getCurrentStage());
-            return vo;
-        }).collect(Collectors.toList()));
+        voPage.setRecords(batchPage.getRecords().stream()
+                .map(b -> toVO(b, collegeMap, majorMap))
+                .collect(Collectors.toList()));
 
         return voPage;
     }
@@ -145,6 +140,38 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
                     return getDetail(current.getId());
                 }
         );
+    }
+
+    @Override
+    public List<String> listDistinctGrades() {
+        LambdaQueryWrapper<Batch> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(Batch::getGrade)
+                .isNotNull(Batch::getGrade)
+                .groupBy(Batch::getGrade)
+                .orderByDesc(Batch::getGrade);
+        applyStudentScope(wrapper);
+
+        return this.list(wrapper).stream()
+                .map(Batch::getGrade)
+                .filter(grade -> grade != null && !grade.isBlank())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BatchVO> listByGrade(String grade) {
+        LambdaQueryWrapper<Batch> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(grade != null && !grade.isBlank(), Batch::getGrade, grade)
+                .orderByDesc(Batch::getCreatedAt);
+        applyStudentScope(wrapper);
+
+        Map<Long, String> collegeMap = collegeMapper.selectList(null).stream()
+                .collect(Collectors.toMap(College::getId, College::getName));
+        Map<Long, String> majorMap = majorMapper.selectList(null).stream()
+                .collect(Collectors.toMap(Major::getId, Major::getName));
+
+        return this.list(wrapper).stream()
+                .map(batch -> toVO(batch, collegeMap, majorMap))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -224,5 +251,15 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         vo.setStudentMaxChoices(batch.getStudentMaxChoices() == null ? null : batch.getStudentMaxChoices().intValue());
         vo.setAllowTeacherReject(batch.getAllowTeacherReject() == null ? null : batch.getAllowTeacherReject().intValue());
         vo.setStatus(batch.getStatus() == null ? null : batch.getStatus().intValue());
+    }
+
+    private BatchVO toVO(Batch batch, Map<Long, String> collegeMap, Map<Long, String> majorMap) {
+        BatchVO vo = new BatchVO();
+        BeanUtils.copyProperties(batch, vo);
+        fillByteFields(batch, vo);
+        vo.setCollegeName(collegeMap.getOrDefault(batch.getCollegeId(), ""));
+        vo.setMajorName(majorMap.getOrDefault(batch.getMajorId(), ""));
+        vo.setCurrentStage(batch.getCurrentStage());
+        return vo;
     }
 }

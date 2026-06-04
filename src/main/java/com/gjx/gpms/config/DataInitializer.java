@@ -21,9 +21,11 @@ public class DataInitializer {
     CommandLineRunner initData(JdbcTemplate jdbcTemplate) {
         return args -> {
             // 自动创建系统表
-            try { jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS sys_user (id BIGINT AUTO_INCREMENT PRIMARY KEY,username VARCHAR(50) NOT NULL UNIQUE,password VARCHAR(255) NOT NULL,real_name VARCHAR(50),phone VARCHAR(20),email VARCHAR(100),status INT DEFAULT 1,college_id BIGINT,major_id BIGINT,create_time DATETIME DEFAULT CURRENT_TIMESTAMP,is_deleted INT DEFAULT 0)"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS sys_user (id BIGINT AUTO_INCREMENT PRIMARY KEY,username VARCHAR(50) NOT NULL UNIQUE,password VARCHAR(255) NOT NULL,real_name VARCHAR(50),phone VARCHAR(20),email VARCHAR(100),student_no VARCHAR(50),grade VARCHAR(20),status INT DEFAULT 1,college_id BIGINT,major_id BIGINT,create_time DATETIME DEFAULT CURRENT_TIMESTAMP,is_deleted INT DEFAULT 0)"); } catch (Exception ignored) {}
 
             // 自动补齐缺失的列
+            try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN student_no VARCHAR(50) COMMENT '学号' AFTER email"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN grade VARCHAR(20) COMMENT '年级' AFTER student_no"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN college_id BIGINT COMMENT '所属学院ID'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE sys_user ADD COLUMN major_id BIGINT COMMENT '所属专业ID'"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("ALTER TABLE sys_permission ADD COLUMN group_name VARCHAR(50) COMMENT '权限分组'"); } catch (Exception ignored) {}
@@ -77,10 +79,6 @@ public class DataInitializer {
             try { jdbcTemplate.execute("INSERT IGNORE INTO sys_role (id, role_name, role_code, status) VALUES (1, '超级管理员', 'SUPER_ADMIN', 1),(2, '校级管理员', 'UNIVERSITY_ADMIN', 1),(3, '院级管理员', 'COLLEGE_ADMIN', 1),(4, '年级管理员', 'GRADE_ADMIN', 1),(5, '专业管理员', 'MAJOR_ADMIN', 1),(6, '教师', 'TEACHER', 1),(7, '学生', 'STUDENT', 1)"); } catch (Exception ignored) {}
             try { jdbcTemplate.execute("UPDATE workflow_item SET batch_id = (SELECT id FROM batch ORDER BY status DESC, created_at DESC LIMIT 1) WHERE batch_id IS NULL"); } catch (Exception ignored) {}
 
-            // 清理非种子用户
-            try { jdbcTemplate.execute("DELETE FROM sys_user_role WHERE user_id IN (SELECT id FROM sys_user WHERE username NOT IN ('admin','u_admin','c_admin','g_admin','m_admin','teacher1','student1'))"); } catch (Exception ignored) {}
-            try { jdbcTemplate.execute("DELETE FROM sys_user WHERE username NOT IN ('admin','u_admin','c_admin','g_admin','m_admin','teacher1','student1')"); } catch (Exception ignored) {}
-
             // 种子：用户
             String[][] seedUsers = {
                 {"admin", "系统管理员", "13800000000", "admin@gpms.com"},
@@ -111,16 +109,18 @@ public class DataInitializer {
                 jdbcTemplate.execute("""
                         UPDATE sys_user u,
                                (
-                                   SELECT college_id, major_id
+                                   SELECT college_id, major_id, grade
                                    FROM batch
                                    WHERE status = 1
                                    ORDER BY created_at
                                    LIMIT 1
                                ) b
                         SET u.college_id = b.college_id,
-                            u.major_id = b.major_id
+                            u.major_id = b.major_id,
+                            u.grade = COALESCE(u.grade, b.grade),
+                            u.student_no = COALESCE(u.student_no, '20260001')
                         WHERE u.username = 'student1'
-                          AND (u.college_id IS NULL OR u.major_id IS NULL)
+                          AND (u.college_id IS NULL OR u.major_id IS NULL OR u.grade IS NULL OR u.student_no IS NULL)
                         """);
             } catch (Exception ignored) {}
 

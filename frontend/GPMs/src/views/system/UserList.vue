@@ -33,7 +33,11 @@
       <el-table :data="tableData" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="username" label="用户名" width="120" />
+        <el-table-column prop="studentNo" label="学号" width="130" />
         <el-table-column prop="realName" label="姓名" width="100" />
+        <el-table-column prop="grade" label="年级" width="90" />
+        <el-table-column prop="collegeName" label="学院" min-width="130" />
+        <el-table-column prop="majorName" label="专业" min-width="130" />
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column prop="email" label="邮箱" />
         <el-table-column label="状态" width="80">
@@ -64,7 +68,7 @@
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialog.visible" :title="dialog.isEdit ? '编辑用户' : '新增用户'" width="500px" @close="resetDialog">
+    <el-dialog v-model="dialog.visible" :title="dialog.isEdit ? '编辑用户' : '新增用户'" width="720px" @close="resetDialog">
       <el-form :model="dialog.form" :rules="dialog.rules" ref="dialogFormRef" label-width="100px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="dialog.form.username" :disabled="dialog.isEdit" />
@@ -74,6 +78,29 @@
         </el-form-item>
         <el-form-item label="真实姓名" prop="realName">
           <el-input v-model="dialog.form.realName" />
+        </el-form-item>
+        <el-form-item label="学号" prop="studentNo">
+          <el-input v-model="dialog.form.studentNo" />
+        </el-form-item>
+        <el-form-item label="年级" prop="grade">
+          <el-select v-model="dialog.form.grade" filterable allow-create clearable default-first-option placeholder="请选择或输入年级" style="width:100%">
+            <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学院" prop="collegeId">
+          <el-select v-model="dialog.form.collegeId" clearable filterable placeholder="请选择学院" style="width:100%" @change="handleCollegeChange">
+            <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="专业" prop="majorId">
+          <el-select v-model="dialog.form.majorId" clearable filterable placeholder="请选择专业" style="width:100%">
+            <el-option v-for="m in filteredMajors" :key="m.id" :label="m.name" :value="m.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="!dialog.isEdit" label="角色" prop="roleIds">
+          <el-checkbox-group v-model="dialog.form.roleIds">
+            <el-checkbox v-for="r in allRoles" :key="r.id" :value="r.id" :label="r.roleName" />
+          </el-checkbox-group>
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="dialog.form.phone" />
@@ -115,18 +142,29 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getUserPage, createUser, updateUser, deleteUser,
   updateUserStatus, resetPassword, getUserRoles, assignUserRoles
 } from '@/api/user'
 import { getRoleList } from '@/api/role'
+import { getCollegeList } from '@/api/college'
+import { getMajorList } from '@/api/major'
+import { getDistinctGrades } from '@/api/batch'
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const searchForm = reactive({ current: 1, size: 10, username: '', realName: '', status: null })
+const colleges = ref([])
+const majors = ref([])
+const grades = ref([])
+const allRoles = ref([])
+const filteredMajors = computed(() => {
+  if (!dialog.form.collegeId) return majors.value
+  return majors.value.filter(m => m.collegeId === dialog.form.collegeId)
+})
 
 const fetchData = async () => {
   loading.value = true
@@ -152,11 +190,12 @@ const resetSearch = () => {
 const dialogFormRef = ref()
 const dialog = reactive({
   visible: false, isEdit: false, loading: false,
-  form: { id: null, username: '', password: '', realName: '', phone: '', email: '' },
+  form: { id: null, username: '', password: '', realName: '', studentNo: '', grade: '', collegeId: null, majorId: null, roleIds: [], phone: '', email: '', status: 1 },
   rules: {
     username: [{ required: true, message: '必填', trigger: 'blur' }],
     password: [{ required: true, message: '必填', trigger: 'blur' }, { min: 6, message: '至少6位', trigger: 'blur' }],
     realName: [{ required: true, message: '必填', trigger: 'blur' }],
+    roleIds: [{ type: 'array', required: true, min: 1, message: '请选择角色', trigger: 'change' }],
     phone: [{ pattern: /^1[3-9]\d{9}$/, message: '格式不正确', trigger: 'blur' }],
     email: [{ type: 'email', message: '格式不正确', trigger: 'blur' }]
   }
@@ -169,13 +208,32 @@ const openCreate = () => {
 
 const openEdit = (row) => {
   dialog.isEdit = true
-  dialog.form = { id: row.id, username: row.username, password: '', realName: row.realName, phone: row.phone || '', email: row.email || '' }
+  dialog.form = {
+    id: row.id,
+    username: row.username,
+    password: '',
+    realName: row.realName,
+    studentNo: row.studentNo || '',
+    grade: row.grade || '',
+    collegeId: row.collegeId || null,
+    majorId: row.majorId || null,
+    roleIds: [],
+    phone: row.phone || '',
+    email: row.email || '',
+    status: row.status
+  }
   dialog.visible = true
 }
 
 const resetDialog = () => {
   dialogFormRef.value?.resetFields()
-  dialog.form = { id: null, username: '', password: '', realName: '', phone: '', email: '' }
+  dialog.form = { id: null, username: '', password: '', realName: '', studentNo: '', grade: '', collegeId: null, majorId: null, roleIds: [], phone: '', email: '', status: 1 }
+}
+
+const handleCollegeChange = () => {
+  if (dialog.form.majorId && !filteredMajors.value.some(m => m.id === dialog.form.majorId)) {
+    dialog.form.majorId = null
+  }
 }
 
 const handleSubmit = async () => {
@@ -279,5 +337,21 @@ const handleAssignRole = async () => {
   }
 }
 
-onMounted(fetchData)
+const loadOptions = async () => {
+  const [collegeRes, majorRes, gradeRes, roleRes] = await Promise.all([
+    getCollegeList(),
+    getMajorList(),
+    getDistinctGrades(),
+    getRoleList()
+  ])
+  colleges.value = collegeRes.data || []
+  majors.value = majorRes.data || []
+  grades.value = gradeRes.data || []
+  allRoles.value = roleRes.data || []
+}
+
+onMounted(() => {
+  loadOptions()
+  fetchData()
+})
 </script>

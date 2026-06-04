@@ -30,6 +30,41 @@ public class LoginVO {
     private String username;
 
     /**
+     * 真实姓名
+     */
+    private String realName;
+
+    /**
+     * 学号
+     */
+    private String studentNo;
+
+    /**
+     * 年级
+     */
+    private String grade;
+
+    /**
+     * 所属学院ID
+     */
+    private Long collegeId;
+
+    /**
+     * 所属学院名称
+     */
+    private String collegeName;
+
+    /**
+     * 所属专业ID
+     */
+    private Long majorId;
+
+    /**
+     * 所属专业名称
+     */
+    private String majorName;
+
+    /**
      * 角色编码列表
      */
     private List<String> roles;

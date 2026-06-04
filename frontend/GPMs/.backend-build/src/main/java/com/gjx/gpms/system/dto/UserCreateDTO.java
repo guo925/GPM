@@ -58,6 +58,16 @@ public class UserCreateDTO {
     private String email;
 
     /**
+     * 学号
+     */
+    private String studentNo;
+
+    /**
+     * 年级
+     */
+    private String grade;
+
+    /**
      * 所属学院ID
      */
     private Long collegeId;

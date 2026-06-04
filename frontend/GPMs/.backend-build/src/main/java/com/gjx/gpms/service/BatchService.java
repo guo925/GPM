@@ -7,6 +7,8 @@ import com.gjx.gpms.dto.BatchUpdateDTO;
 import com.gjx.gpms.entity.Batch;
 import com.gjx.gpms.vo.BatchVO;
 
+import java.util.List;
+
 /**
  * 批次服务接口
  *
@@ -28,6 +30,16 @@ public interface BatchService extends IService<Batch> {
      * 获取CurrentBatch。
      */
     BatchVO getCurrentBatch();
+
+    /**
+     * 查询所有年级。
+     */
+    List<String> listDistinctGrades();
+
+    /**
+     * 按年级查询批次。
+     */
+    List<BatchVO> listByGrade(String grade);
 
     /**
      * 创建相关逻辑。

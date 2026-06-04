@@ -171,12 +171,16 @@
           <div class="header-subtitle">Graduation Project Management System</div>
         </div>
         <div class="header-user">
-          <el-tag v-if="authStore.user?.roles?.length" effect="plain">
-            {{ authStore.user.roles.join(' / ') }}
-          </el-tag>
+          <div class="user-profile">
+            <el-tag v-if="roleText" effect="plain">{{ roleText }}</el-tag>
+            <span v-if="authStore.user?.studentNo">学号：{{ authStore.user.studentNo }}</span>
+            <span v-if="authStore.user?.majorName">专业：{{ authStore.user.majorName }}</span>
+            <span v-if="authStore.user?.grade">年级：{{ authStore.user.grade }}</span>
+            <span v-if="authStore.user?.collegeName">学院：{{ authStore.user.collegeName }}</span>
+          </div>
           <div class="user-name">
             <el-icon><User /></el-icon>
-            <span>{{ authStore.user?.username }}</span>
+            <span>{{ authStore.user?.realName || authStore.user?.username }}</span>
           </div>
           <el-button type="danger" text @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
@@ -204,6 +208,18 @@ const authStore = useAuthStore()
 const isSuperAdmin = computed(() => hasRole(authStore.roles, 'SUPER_ADMIN'))
 const showSystemMenu = computed(() =>
   hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN'])
+)
+const roleNameMap = {
+  SUPER_ADMIN: '超级管理员',
+  UNIVERSITY_ADMIN: '校级管理员',
+  COLLEGE_ADMIN: '院级管理员',
+  GRADE_ADMIN: '年级管理员',
+  MAJOR_ADMIN: '专业管理员',
+  TEACHER: '教师',
+  STUDENT: '学生'
+}
+const roleText = computed(() =>
+  (authStore.user?.roles || []).map(role => roleNameMap[role] || role).join(' / ')
 )
 
 const homePath = computed(() => getDashboardPath(authStore.roles))
@@ -312,6 +328,20 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: 760px;
+  color: var(--gp-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .user-name {
@@ -320,6 +350,7 @@ const handleLogout = async () => {
   gap: 6px;
   color: var(--gp-text-secondary);
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .app-main {

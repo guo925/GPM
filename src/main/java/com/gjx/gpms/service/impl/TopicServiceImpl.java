@@ -96,7 +96,8 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     private void applyStudentFilter(LambdaQueryWrapper<Topic> wrapper, LoginUser loginUser) {
         User student = userMapper.selectById(loginUser.getUserId());
-        if (student == null || student.getCollegeId() == null || student.getMajorId() == null) {
+        if (student == null || student.getCollegeId() == null || student.getMajorId() == null
+                || student.getGrade() == null || student.getGrade().isBlank()) {
             wrapper.apply("1 = 0");
             return;
         }
@@ -105,6 +106,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
                         new LambdaQueryWrapper<Batch>()
                                 .eq(Batch::getCollegeId, student.getCollegeId())
                                 .eq(Batch::getMajorId, student.getMajorId())
+                                .eq(Batch::getGrade, student.getGrade())
                                 .eq(Batch::getStatus, (byte) 1)
                 )
                 .stream()

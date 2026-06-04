@@ -6,6 +6,7 @@
         <div class="batch-switch__name">{{ selectedGrade || '未选择年级' }}</div>
       </div>
       <el-select
+        v-if="!isStudent"
         v-model="selectedGrade"
         placeholder="请选择年级"
         style="width: 300px"
@@ -18,6 +19,7 @@
           :value="grade"
         />
       </el-select>
+      <el-input v-else :model-value="selectedGrade ? `${selectedGrade} 届` : '未配置年级'" disabled style="width: 300px" />
     </div>
 
     <el-card class="table-card" header="通知公告" v-loading="noticeLoading">
@@ -70,8 +72,10 @@ import { getLatestAnnouncements } from '@/api/announcement'
 import { getBatchDetail, getBatchPage, getCurrentBatch, getDistinctGrades } from '@/api/batch'
 import { getFeatureItems } from '@/api/workflow'
 import { getSelectedGrade, setSelectedGrade, withSelectedGradeQuery } from '@/utils/batchContext'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const noticeLoading = ref(false)
 const todoLoading = ref(false)
@@ -81,6 +85,7 @@ const todos = ref([])
 const stages = ref([])
 const grades = ref([])
 const selectedGrade = ref(getSelectedGrade())
+const isStudent = computed(() => (authStore.user?.roles || []).includes('STUDENT'))
 
 const workflowTasks = [
   { key: 'taskBook', apiBase: '/thesis/task-book', title: '任务书审核', path: '/thesis/task-book' },
@@ -184,6 +189,12 @@ const loadProgress = async () => {
 }
 
 const loadGrades = async () => {
+  if (isStudent.value) {
+    selectedGrade.value = authStore.user?.grade || ''
+    setSelectedGrade(selectedGrade.value)
+    grades.value = selectedGrade.value ? [selectedGrade.value] : []
+    return
+  }
   const res = await getDistinctGrades()
   grades.value = res.data || []
   if (!selectedGrade.value && grades.value.length > 0) {

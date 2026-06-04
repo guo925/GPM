@@ -29,11 +29,23 @@ public class UserVO {
     @Schema(description = "邮箱")
     private String email;
 
+    @Schema(description = "学号")
+    private String studentNo;
+
+    @Schema(description = "年级")
+    private String grade;
+
     @Schema(description = "所属学院ID")
     private Long collegeId;
 
+    @Schema(description = "所属学院名称")
+    private String collegeName;
+
     @Schema(description = "所属专业ID")
     private Long majorId;
+
+    @Schema(description = "所属专业名称")
+    private String majorName;
 
     @Schema(description = "状态")
     private Integer status;

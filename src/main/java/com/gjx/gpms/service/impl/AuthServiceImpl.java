@@ -4,6 +4,12 @@ import com.gjx.gpms.dto.LoginDTO;
 import com.gjx.gpms.security.model.LoginUser;
 import com.gjx.gpms.security.util.JwtUtil;
 import com.gjx.gpms.service.AuthService;
+import com.gjx.gpms.entity.College;
+import com.gjx.gpms.entity.Major;
+import com.gjx.gpms.mapper.CollegeMapper;
+import com.gjx.gpms.mapper.MajorMapper;
+import com.gjx.gpms.system.entity.User;
+import com.gjx.gpms.system.mapper.UserMapper;
 import com.gjx.gpms.system.mapper.UserRoleMapper;
 import com.gjx.gpms.vo.LoginVO;
 
@@ -40,6 +46,12 @@ public class AuthServiceImpl implements AuthService {
     private final RedisCacheService redisCacheService;
 
     private final UserRoleMapper userRoleMapper;
+
+    private final UserMapper userMapper;
+
+    private final CollegeMapper collegeMapper;
+
+    private final MajorMapper majorMapper;
 
     /**
      * 登录
@@ -89,8 +101,31 @@ public class AuthServiceImpl implements AuthService {
         vo.setToken(token);
         vo.setUserId(loginUser.getUserId());
         vo.setUsername(loginUser.getUsername());
+        fillUserProfile(vo, loginUser.getUserId());
         vo.setRoles(roles);
         vo.setPermissions(permissions);
         return vo;
+    }
+
+    private void fillUserProfile(LoginVO vo, Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return;
+        }
+
+        vo.setRealName(user.getRealName());
+        vo.setStudentNo(user.getStudentNo());
+        vo.setGrade(user.getGrade());
+        vo.setCollegeId(user.getCollegeId());
+        vo.setMajorId(user.getMajorId());
+
+        if (user.getCollegeId() != null) {
+            College college = collegeMapper.selectById(user.getCollegeId());
+            vo.setCollegeName(college == null ? null : college.getName());
+        }
+        if (user.getMajorId() != null) {
+            Major major = majorMapper.selectById(user.getMajorId());
+            vo.setMajorName(major == null ? null : major.getName());
+        }
     }
 }

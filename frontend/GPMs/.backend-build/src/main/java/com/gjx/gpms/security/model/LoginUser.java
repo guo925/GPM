@@ -30,6 +30,20 @@ public class LoginUser implements UserDetails, Serializable {
 
     private String username;
 
+    private String realName;
+
+    private String studentNo;
+
+    private String grade;
+
+    private Long collegeId;
+
+    private String collegeName;
+
+    private Long majorId;
+
+    private String majorName;
+
     /**
      * 密码 —— 不序列化到JSON
      */

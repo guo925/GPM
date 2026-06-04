@@ -7,6 +7,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gjx.gpms.cache.CacheKeys;
 import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.common.exception.BusinessException;
+import com.gjx.gpms.entity.College;
+import com.gjx.gpms.entity.Major;
+import com.gjx.gpms.mapper.CollegeMapper;
+import com.gjx.gpms.mapper.MajorMapper;
 import com.gjx.gpms.system.dto.UserCreateDTO;
 import com.gjx.gpms.system.dto.UserPageDTO;
 import com.gjx.gpms.system.dto.UserResetPasswordDTO;
@@ -51,6 +55,10 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
 
     private final RoleMapper roleMapper;
 
+    private final CollegeMapper collegeMapper;
+
+    private final MajorMapper majorMapper;
+
     /**
      * 新增用户
      *
@@ -93,6 +101,18 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
 
         // 保存用户
         this.save(user);
+
+        if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
+            List<UserRole> userRoles = dto.getRoleIds().stream()
+                    .map(roleId -> {
+                        UserRole userRole = new UserRole();
+                        userRole.setUserId(user.getId());
+                        userRole.setRoleId(roleId);
+                        return userRole;
+                    })
+                    .collect(Collectors.toList());
+            userRoleMapper.insert(userRoles);
+        }
 
         log.info("新增用户成功，用户名：{}", dto.getUsername());
     }
@@ -147,14 +167,7 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         List<UserVO> voList =
                 userPage.getRecords()
                         .stream()
-                        .map(user -> {
-
-                            UserVO vo = new UserVO();
-
-                            BeanUtils.copyProperties(user, vo);
-
-                            return vo;
-                        })
+                        .map(this::toUserVO)
                         .collect(Collectors.toList());
 
         // VO分页对象
@@ -193,12 +206,7 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
             throw new BusinessException("用户不存在");
         }
 
-        // Entity -> VO
-        UserVO userVO = new UserVO();
-
-        BeanUtils.copyProperties(user, userVO);
-
-        return userVO;
+        return toUserVO(user);
     }
 
 
@@ -460,5 +468,20 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         log.info("分配用户角色成功，用户ID：{}", dto.getUserId());
     }
 
+    private UserVO toUserVO(User user) {
+        UserVO vo = new UserVO();
+        BeanUtils.copyProperties(user, vo);
+
+        if (user.getCollegeId() != null) {
+            College college = collegeMapper.selectById(user.getCollegeId());
+            vo.setCollegeName(college == null ? null : college.getName());
+        }
+        if (user.getMajorId() != null) {
+            Major major = majorMapper.selectById(user.getMajorId());
+            vo.setMajorName(major == null ? null : major.getName());
+        }
+
+        return vo;
+    }
 
 }

@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS sys_user (
     real_name VARCHAR(50) COMMENT '真实姓名',
     phone VARCHAR(20) COMMENT '手机号',
     email VARCHAR(100) COMMENT '邮箱',
+    student_no VARCHAR(50) COMMENT '学号',
+    grade VARCHAR(20) COMMENT '年级',
     status INT DEFAULT 1 COMMENT '状态 0-禁用 1-启用',
     college_id BIGINT COMMENT '所属学院ID',
     major_id BIGINT COMMENT '所属专业ID',

@@ -16,9 +16,10 @@
       <div class="toolbar-form">
         <el-form :inline="true" :model="query">
           <el-form-item label="年级">
-            <el-select v-model="query.grade" placeholder="全部年级" clearable style="width:240px" @change="loadData">
+            <el-select v-if="!isStudent" v-model="query.grade" placeholder="全部年级" clearable style="width:240px" @change="loadData">
               <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
             </el-select>
+            <el-input v-else :model-value="query.grade ? `${query.grade} 届` : '未配置年级'" disabled style="width:240px" />
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="query.status" placeholder="全部状态" clearable style="width:140px">
@@ -102,9 +103,24 @@
 
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑课题' : '新增课题'" width="600px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item v-if="!isEdit" label="年级" prop="grade">
+          <el-select v-model="form.grade" placeholder="请选择年级" style="width:100%" @change="handleTopicGradeChange">
+            <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="!isEdit" label="学院" prop="collegeId">
+          <el-select v-model="form.collegeId" placeholder="请选择学院" filterable style="width:100%" @change="handleTopicCollegeChange">
+            <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="!isEdit" label="专业" prop="majorId">
+          <el-select v-model="form.majorId" placeholder="请选择专业" filterable style="width:100%" @change="handleTopicMajorChange">
+            <el-option v-for="m in topicMajors" :key="m.id" :label="m.name" :value="m.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="所属批次" prop="batchId">
-          <el-select v-model="form.batchId" placeholder="请选择批次" :disabled="isEdit">
-            <el-option v-for="b in batches" :key="b.id" :label="b.name" :value="b.id" />
+          <el-select v-model="form.batchId" placeholder="请选择批次" :disabled="isEdit" style="width:100%">
+            <el-option v-for="b in topicBatches" :key="b.id" :label="batchLabel(b)" :value="b.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="题目名称" prop="title">
@@ -175,16 +191,67 @@ const submittedIds = ref([])
 const submitting = ref(false)
 const uploading = ref(false)
 const tableRef = ref(null)
-const query = ref({ current: 1, size: 10, grade: getSelectedGrade(), status: null })
+const query = ref({ current: 1, size: 10, grade: isStudent.value ? (authStore.user?.grade || '') : getSelectedGrade(), status: null })
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
 const editId = ref(null)
-const form = ref({ batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' })
+const form = ref({ grade: '', collegeId: null, majorId: null, batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' })
+const colleges = computed(() => {
+  const map = new Map()
+  batches.value.forEach(batch => {
+    if (batch.collegeId && !map.has(batch.collegeId)) {
+      map.set(batch.collegeId, { id: batch.collegeId, name: batch.collegeName || String(batch.collegeId) })
+    }
+  })
+  return [...map.values()]
+})
+const majors = computed(() => {
+  const map = new Map()
+  batches.value.forEach(batch => {
+    if (batch.majorId && !map.has(batch.majorId)) {
+      map.set(batch.majorId, { id: batch.majorId, collegeId: batch.collegeId, name: batch.majorName || String(batch.majorId) })
+    }
+  })
+  return [...map.values()]
+})
+const topicMajors = computed(() => {
+  if (!form.value.collegeId) return majors.value
+  return majors.value.filter(m => m.collegeId === form.value.collegeId)
+})
+const topicBatches = computed(() => batches.value.filter(batch =>
+  (!form.value.grade || batch.grade === form.value.grade)
+  && (!form.value.collegeId || batch.collegeId === form.value.collegeId)
+  && (!form.value.majorId || batch.majorId === form.value.majorId)
+))
 const rules = {
+  grade: [{ required: true, message: '请选择年级', trigger: 'change' }],
+  collegeId: [{ required: true, message: '请选择学院', trigger: 'change' }],
+  majorId: [{ required: true, message: '请选择专业', trigger: 'change' }],
   batchId: [{ required: true, message: '请选择批次', trigger: 'change' }],
   title: [{ required: true, message: '请输入题目名称', trigger: 'blur' }],
   source: [{ required: true, message: '请选择来源', trigger: 'change' }]
+}
+
+const batchLabel = (batch) => `${batch.name}（${batch.grade} 届 / ${batch.collegeName || '-'} / ${batch.majorName || '-'}）`
+
+const handleTopicGradeChange = () => {
+  if (form.value.batchId && !topicBatches.value.some(batch => batch.id === form.value.batchId)) {
+    form.value.batchId = null
+  }
+}
+
+const handleTopicCollegeChange = () => {
+  if (form.value.majorId && !topicMajors.value.some(major => major.id === form.value.majorId)) {
+    form.value.majorId = null
+  }
+  form.value.batchId = null
+}
+
+const handleTopicMajorChange = () => {
+  if (form.value.batchId && !topicBatches.value.some(batch => batch.id === form.value.batchId)) {
+    form.value.batchId = null
+  }
 }
 
 const canSelect = (row) => {
@@ -255,10 +322,17 @@ const loadBatches = async () => {
 
 const loadGrades = async () => {
   const res = await getDistinctGrades()
-  grades.value = res.data || []
+  grades.value = isStudent.value && authStore.user?.grade ? [authStore.user.grade] : (res.data || [])
+  if (isStudent.value) {
+    query.value.grade = authStore.user?.grade || ''
+    setSelectedGrade(query.value.grade)
+  }
 }
 
 const loadData = async () => {
+  if (isStudent.value) {
+    query.value.grade = authStore.user?.grade || ''
+  }
   setSelectedGrade(query.value.grade)
   loading.value = true
   try {
@@ -277,7 +351,7 @@ const handleAdd = () => {
   if (!canCreateTopic.value) return
   isEdit.value = false
   editId.value = null
-  form.value = { batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' }
+  form.value = { grade: query.value.grade || '', collegeId: null, majorId: null, batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' }
   dialogVisible.value = true
 }
 
@@ -285,7 +359,8 @@ const handleEdit = (row) => {
   if (!canEditTopic.value) return
   isEdit.value = true
   editId.value = row.id
-  form.value = { batchId: row.batchId, title: row.title, description: row.description, source: row.source, maxCapacity: row.maxCapacity, filePath: row.filePath || '' }
+  const batch = batches.value.find(item => item.id === row.batchId)
+  form.value = { grade: batch?.grade || '', collegeId: batch?.collegeId || null, majorId: batch?.majorId || null, batchId: row.batchId, title: row.title, description: row.description, source: row.source, maxCapacity: row.maxCapacity, filePath: row.filePath || '' }
   dialogVisible.value = true
 }
 
@@ -326,11 +401,19 @@ const handleDelete = async (row) => {
 
 const handleSubmit = async () => {
   await formRef.value.validate()
+  const payload = {
+    batchId: form.value.batchId,
+    title: form.value.title,
+    description: form.value.description,
+    source: form.value.source,
+    maxCapacity: form.value.maxCapacity,
+    filePath: form.value.filePath
+  }
   if (isEdit.value) {
-    await updateTopic(editId.value, form.value)
+    await updateTopic(editId.value, payload)
     ElMessage.success('修改成功')
   } else {
-    await createTopic(form.value)
+    await createTopic(payload)
     ElMessage.success('新增成功')
   }
   dialogVisible.value = false

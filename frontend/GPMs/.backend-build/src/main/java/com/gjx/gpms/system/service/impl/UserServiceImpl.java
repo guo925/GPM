@@ -7,6 +7,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gjx.gpms.cache.CacheKeys;
 import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.common.exception.BusinessException;
+import com.gjx.gpms.entity.College;
+import com.gjx.gpms.entity.Major;
+import com.gjx.gpms.mapper.CollegeMapper;
+import com.gjx.gpms.mapper.MajorMapper;
 import com.gjx.gpms.system.dto.UserCreateDTO;
 import com.gjx.gpms.system.dto.UserPageDTO;
 import com.gjx.gpms.system.dto.UserResetPasswordDTO;
@@ -31,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +55,10 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
     private final UserRoleMapper userRoleMapper;
 
     private final RoleMapper roleMapper;
+
+    private final CollegeMapper collegeMapper;
+
+    private final MajorMapper majorMapper;
 
     /**
      * 新增用户
@@ -143,18 +152,16 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         // 查询分页
         Page<User> userPage = this.page(page, wrapper);
 
+        Map<Long, String> collegeMap = collegeMapper.selectList(null).stream()
+                .collect(Collectors.toMap(College::getId, College::getName));
+        Map<Long, String> majorMap = majorMapper.selectList(null).stream()
+                .collect(Collectors.toMap(Major::getId, Major::getName));
+
         // Entity -> VO
         List<UserVO> voList =
                 userPage.getRecords()
                         .stream()
-                        .map(user -> {
-
-                            UserVO vo = new UserVO();
-
-                            BeanUtils.copyProperties(user, vo);
-
-                            return vo;
-                        })
+                        .map(user -> toVO(user, collegeMap, majorMap))
                         .collect(Collectors.toList());
 
         // VO分页对象
@@ -193,12 +200,12 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
             throw new BusinessException("用户不存在");
         }
 
-        // Entity -> VO
-        UserVO userVO = new UserVO();
+        Map<Long, String> collegeMap = collegeMapper.selectList(null).stream()
+                .collect(Collectors.toMap(College::getId, College::getName));
+        Map<Long, String> majorMap = majorMapper.selectList(null).stream()
+                .collect(Collectors.toMap(Major::getId, Major::getName));
 
-        BeanUtils.copyProperties(user, userVO);
-
-        return userVO;
+        return toVO(user, collegeMap, majorMap);
     }
 
 
@@ -460,5 +467,12 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         log.info("分配用户角色成功，用户ID：{}", dto.getUserId());
     }
 
+    private UserVO toVO(User user, Map<Long, String> collegeMap, Map<Long, String> majorMap) {
+        UserVO vo = new UserVO();
+        BeanUtils.copyProperties(user, vo);
+        vo.setCollegeName(collegeMap.getOrDefault(user.getCollegeId(), ""));
+        vo.setMajorName(majorMap.getOrDefault(user.getMajorId(), ""));
+        return vo;
+    }
 
 }
