@@ -216,6 +216,15 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         Long teacherId = UserContext.getUserId();
         List<Long> batchIds = resolveBatchIds(batchId, grade);
 
+        if (isAdminUser()) {
+            List<SelectionRecord> records = this.list(
+                    new LambdaQueryWrapper<SelectionRecord>()
+                            .in(batchIds != null && !batchIds.isEmpty(), SelectionRecord::getBatchId, batchIds)
+                            .orderByAsc(SelectionRecord::getPriority)
+            );
+            return toVOList(records);
+        }
+
         // 查找该教师创建的课题
         List<Topic> myTopics = topicMapper.selectList(
                 new LambdaQueryWrapper<Topic>()
@@ -238,6 +247,14 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
         return toVOList(records);
     }
 
+    private boolean isAdminUser() {
+        if (UserContext.getLoginUser() == null || UserContext.getLoginUser().getRoleCodes() == null) {
+            return false;
+        }
+        return UserContext.getLoginUser().getRoleCodes().stream()
+                .anyMatch(role -> role.endsWith("_ADMIN") || "SUPER_ADMIN".equals(role));
+    }
+
     /**
      * 处理teacherReview相关逻辑。
      */
@@ -250,9 +267,9 @@ public class SelectionRecordServiceImpl extends ServiceImpl<SelectionRecordMappe
             throw new BusinessException("志愿记录不存在");
         }
 
-        // 验证该教师是课题的创建者
+        // 教师只能审核自己创建课题的志愿，管理员可以审核全部志愿。
         Topic topic = topicMapper.selectById(record.getTopicId());
-        if (topic == null || !topic.getCreatorId().equals(UserContext.getUserId())) {
+        if (topic == null || (!isAdminUser() && !topic.getCreatorId().equals(UserContext.getUserId()))) {
             throw new BusinessException("无权审核该志愿");
         }
 

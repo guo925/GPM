@@ -247,6 +247,27 @@ const stringifyStageTimes = (stageTimes) => {
   return JSON.stringify(config)
 }
 
+const validateStageTimes = () => {
+  let previousEnd = null
+  let previousLabel = ''
+  for (const stage of stageOptionsForTime) {
+    const time = form.value.stageTimes[stage.value] || {}
+    if (time.start && time.end && new Date(time.end).getTime() <= new Date(time.start).getTime()) {
+      ElMessage.warning(`${stage.label}结束时间必须晚于开始时间`)
+      return false
+    }
+    if (time.start && previousEnd && new Date(time.start).getTime() < previousEnd) {
+      ElMessage.warning(`${stage.label}开始时间不能早于${previousLabel}结束时间`)
+      return false
+    }
+    if (time.end) {
+      previousEnd = new Date(time.end).getTime()
+      previousLabel = stage.label
+    }
+  }
+  return true
+}
+
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
@@ -267,7 +288,10 @@ const form = ref({
 })
 const rules = {
   name: [{ required: true, message: '请输入批次名称', trigger: 'blur' }],
-  grade: [{ required: true, message: '请输入年级', trigger: 'blur' }],
+  grade: [
+    { required: true, message: '请输入年级', trigger: 'blur' },
+    { pattern: /^\d{4}届?$/, message: '年级格式如2028或2028届', trigger: 'blur' }
+  ],
   collegeId: [{ required: true, message: '请选择学院', trigger: 'change' }],
   majorId: [{ required: true, message: '请选择专业', trigger: 'change' }]
 }
@@ -353,6 +377,7 @@ const handleDelete = async (row) => {
 
 const handleSubmit = async () => {
   await formRef.value.validate()
+  if (!validateStageTimes()) return
   const payload = {
     ...form.value,
     config: stringifyStageTimes(form.value.stageTimes)

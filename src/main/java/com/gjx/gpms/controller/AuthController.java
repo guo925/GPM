@@ -7,7 +7,6 @@ import com.gjx.gpms.dto.LoginDTO;
 import com.gjx.gpms.security.model.LoginUser;
 import com.gjx.gpms.security.util.JwtUtil;
 import com.gjx.gpms.service.AuthService;
-import com.gjx.gpms.system.mapper.UserRoleMapper;
 import com.gjx.gpms.vo.LoginVO;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,8 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 认证接口
@@ -30,7 +27,6 @@ public class AuthController {
     private final AuthService authService;
     private final JwtUtil jwtUtil;
     private final RedisCacheService redisCacheService;
-    private final UserRoleMapper userRoleMapper;
 
     /**
      * 登录相关逻辑。
@@ -75,13 +71,10 @@ public class AuthController {
             return Result.error("未登录");
         }
         LoginUser loginUser = (LoginUser) authentication.getPrincipal();
-        List<String> roles = userRoleMapper.selectRoleCodesByUserId(loginUser.getUserId());
-
-        LoginVO vo = new LoginVO();
-        vo.setUserId(loginUser.getUserId());
-        vo.setUsername(loginUser.getUsername());
-        vo.setRoles(roles);
-        vo.setPermissions(loginUser.getPermissionCodes());
+        LoginVO vo = authService.currentUser(loginUser.getUserId());
+        if (vo == null) {
+            return Result.error("用户不存在");
+        }
         return Result.success(vo);
     }
 }

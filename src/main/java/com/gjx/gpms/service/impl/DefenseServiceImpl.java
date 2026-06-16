@@ -11,6 +11,9 @@ import com.gjx.gpms.mapper.*;
 import com.gjx.gpms.security.context.UserContext;
 import com.gjx.gpms.service.BatchService;
 import com.gjx.gpms.service.DefenseService;
+import com.gjx.gpms.system.entity.User;
+import com.gjx.gpms.system.mapper.UserMapper;
+import com.gjx.gpms.system.mapper.UserRoleMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -36,6 +39,9 @@ public class DefenseServiceImpl implements DefenseService {
     private final DefenseResultMapper defenseResultMapper;
     private final BatchMapper batchMapper;
     private final BatchService batchService;
+    private final UserMapper userMapper;
+    private final UserRoleMapper userRoleMapper;
+    private final StudentTopicMapper studentTopicMapper;
 
     /**
      * 查询列表batches相关逻辑。
@@ -64,6 +70,10 @@ public class DefenseServiceImpl implements DefenseService {
     public void createBatch(DefenseBatchDTO dto) {
         if (batchMapper.selectById(dto.getBatchId()) == null) {
             throw new BusinessException("毕设批次不存在");
+        }
+        if (dto.getStartTime() != null && dto.getEndTime() != null
+                && !dto.getEndTime().isAfter(dto.getStartTime())) {
+            throw new BusinessException("答辩批次结束时间必须晚于开始时间");
         }
         DefenseBatch entity = new DefenseBatch();
         BeanUtils.copyProperties(dto, entity);
@@ -120,6 +130,7 @@ public class DefenseServiceImpl implements DefenseService {
         if (defenseBatchMapper.selectById(dto.getDefenseBatchId()) == null) {
             throw new BusinessException("答辩批次不存在");
         }
+        validateTeacher(dto.getLeaderId(), "答辩组长");
         DefenseGroup group = new DefenseGroup();
         group.setDefenseBatchId(dto.getDefenseBatchId());
         group.setName(dto.getName());
@@ -131,6 +142,7 @@ public class DefenseServiceImpl implements DefenseService {
                 if (Objects.equals(memberId, dto.getLeaderId())) {
                     continue;
                 }
+                validateTeacher(memberId, "答辩组成员");
                 DefenseGroupMember member = new DefenseGroupMember();
                 member.setGroupId(group.getId());
                 member.setTeacherId(memberId);
@@ -196,6 +208,21 @@ public class DefenseServiceImpl implements DefenseService {
         if (group == null) {
             throw new BusinessException("答辩组不存在");
         }
+        User student = userMapper.selectById(dto.getStudentId());
+        if (student == null) {
+            throw new BusinessException("学生不存在");
+        }
+        if (!userRoleMapper.selectRoleCodesByUserId(dto.getStudentId()).contains("STUDENT")) {
+            throw new BusinessException("答辩安排只能选择学生用户");
+        }
+        Long activeTopicCount = studentTopicMapper.selectCount(
+                new LambdaQueryWrapper<StudentTopic>()
+                        .eq(StudentTopic::getStudentId, dto.getStudentId())
+                        .eq(StudentTopic::getStatus, "active")
+        );
+        if (activeTopicCount == null || activeTopicCount == 0) {
+            throw new BusinessException("只能安排已有有效选题的学生");
+        }
         DefenseArrangement da = new DefenseArrangement();
         da.setGroupId(dto.getGroupId());
         da.setDefenseBatchId(group.getDefenseBatchId());
@@ -209,6 +236,16 @@ public class DefenseServiceImpl implements DefenseService {
         }
         da.setLocation(dto.getLocation());
         defenseArrangementMapper.insert(da);
+    }
+
+    private void validateTeacher(Long userId, String label) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(label + "不存在");
+        }
+        if (!userRoleMapper.selectRoleCodesByUserId(userId).contains("TEACHER")) {
+            throw new BusinessException(label + "必须是教师用户");
+        }
     }
 
     /**

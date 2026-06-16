@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +47,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements UserService {
+
+    private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
     private final PasswordEncoder passwordEncoder;
 
@@ -82,6 +85,8 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
 
             throw new BusinessException("用户名已存在");
         }
+        validateGrade(dto.getGrade());
+        validateStudentNo(dto.getStudentNo(), null);
 
         // 历史逻辑删除记录仍会占用 username 唯一键，新增前先释放。
         baseMapper.releaseDeletedUsername(dto.getUsername());
@@ -103,6 +108,9 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         this.save(user);
 
         if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
+            if (dto.getRoleIds().stream().anyMatch(this::isSuperAdminRoleId)) {
+                throw new BusinessException("禁止创建新的超级管理员账号");
+            }
             List<UserRole> userRoles = dto.getRoleIds().stream()
                     .map(roleId -> {
                         UserRole userRole = new UserRole();
@@ -254,6 +262,8 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
 
             throw new BusinessException("邮箱已存在");
         }
+        validateGrade(dto.getGrade());
+        validateStudentNo(dto.getStudentNo(), dto.getId());
 
         // DTO -> Entity
         BeanUtils.copyProperties(dto, user);
@@ -287,7 +297,7 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         }
 
         // 超级管理员禁止删除
-        if ("admin".equals(user.getUsername())) {
+        if ("admin".equals(user.getUsername()) || isSuperAdmin(user.getId())) {
 
             log.error("超级管理员禁止删除");
 
@@ -435,6 +445,8 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
             throw new BusinessException("用户不存在");
         }
 
+        ensureSuperAdminStillExists(user, dto);
+
         // 删除旧角色关联
         userRoleMapper.delete(
                 new LambdaQueryWrapper<UserRole>()
@@ -466,6 +478,70 @@ public class UserServiceImpl  extends ServiceImpl<UserMapper, User>  implements 
         } catch (Exception ignored) {}
 
         log.info("分配用户角色成功，用户ID：{}", dto.getUserId());
+    }
+
+    private void ensureSuperAdminStillExists(User user, UserRoleAssignDTO dto) {
+        boolean keepsSuperAdminRole = dto.getRoleIds() != null
+                && dto.getRoleIds().stream().anyMatch(this::isSuperAdminRoleId);
+        if ("admin".equals(user.getUsername()) && !keepsSuperAdminRole) {
+            throw new BusinessException("内置超级管理员必须保留超级管理员角色");
+        }
+        if (keepsSuperAdminRole && !isSuperAdmin(dto.getUserId())) {
+            throw new BusinessException("禁止将普通用户提升为超级管理员");
+        }
+        if (keepsSuperAdminRole) {
+            return;
+        }
+        if (!isSuperAdmin(dto.getUserId())) {
+            return;
+        }
+        Long remaining = countSuperAdminsExcluding(dto.getUserId());
+        if (remaining == null || remaining == 0) {
+            throw new BusinessException("至少保留一个超级管理员");
+        }
+    }
+
+    private boolean isSuperAdmin(Long userId) {
+        return userRoleMapper.selectRoleCodesByUserId(userId).contains(SUPER_ADMIN_ROLE);
+    }
+
+    private boolean isSuperAdminRoleId(Long roleId) {
+        Role role = roleMapper.selectById(roleId);
+        return role != null && SUPER_ADMIN_ROLE.equals(role.getRoleCode());
+    }
+
+    private Long countSuperAdminsExcluding(Long userId) {
+        Role role = roleMapper.selectOne(
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, SUPER_ADMIN_ROLE)
+        );
+        if (role == null) {
+            return 0L;
+        }
+        return userRoleMapper.selectCount(
+                new LambdaQueryWrapper<UserRole>()
+                        .eq(UserRole::getRoleId, role.getId())
+                        .ne(Objects.nonNull(userId), UserRole::getUserId, userId)
+        );
+    }
+
+    private void validateGrade(String grade) {
+        if (grade != null && !grade.isBlank() && !grade.matches("^\\d{4}届?$")) {
+            throw new BusinessException("年级格式必须为4位年份或4位年份加届，例如2028届");
+        }
+    }
+
+    private void validateStudentNo(String studentNo, Long excludeUserId) {
+        if (studentNo == null || studentNo.isBlank()) {
+            return;
+        }
+        Long count = this.count(
+                new LambdaQueryWrapper<User>()
+                        .eq(User::getStudentNo, studentNo)
+                        .ne(excludeUserId != null, User::getId, excludeUserId)
+        );
+        if (count != null && count > 0) {
+            throw new BusinessException("学号已被其他用户使用");
+        }
     }
 
     private UserVO toUserVO(User user) {

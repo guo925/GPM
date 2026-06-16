@@ -15,6 +15,7 @@
         <el-table v-if="pendingList.length" :data="pendingList" border stripe>
           <el-table-column prop="studentName" label="学生" width="100" />
           <el-table-column prop="topicTitle" label="课题" />
+          <el-table-column v-if="isAdmin" prop="advisorName" label="指导教师" width="120" />
           <el-table-column prop="priority" label="优先级" width="80" />
           <el-table-column label="操作" width="200">
             <template #default="{ row }">
@@ -30,6 +31,7 @@
         <el-table v-if="assignedList.length" :data="assignedList" border stripe>
           <el-table-column prop="studentName" label="学生" width="100" />
           <el-table-column prop="topicTitle" label="课题" />
+          <el-table-column v-if="isAdmin" prop="advisorName" label="指导教师" width="120" />
           <el-table-column prop="status" label="状态" width="100" />
           <el-table-column prop="allocationTime" label="分配时间" width="160" />
         </el-table>
@@ -51,31 +53,44 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useAuthStore } from '@/stores/auth'
+import { hasAnyRole, useAuthStore } from '@/stores/auth'
 import { getDistinctGrades } from '@/api/batch'
 import { getReviewList, teacherReview } from '@/api/selection'
 import { getStudentTopicPage } from '@/api/studentTopic'
 
 const authStore = useAuthStore()
+const route = useRoute()
 const grade = ref(null)
 const grades = ref([])
 const pendingList = ref([])
 const assignedList = ref([])
 const tab = ref('pending')
+const isAdmin = computed(() => hasAnyRole(authStore.roles, ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN']))
 
 const dialog = reactive({ visible: false, comment: '', loading: false, row: null })
 
 const fetchGrades = async () => {
   const res = await getDistinctGrades()
   grades.value = res.data || []
+  const queryGrade = route.query.grade ? String(route.query.grade) : ''
+  grade.value = queryGrade || grade.value || grades.value[0] || null
+  if (grade.value) {
+    await onGradeChange(grade.value)
+  }
 }
 
 const onGradeChange = async (g) => {
   const [pRes, aRes] = await Promise.all([
     getReviewList(g),
-    getStudentTopicPage({ current: 1, size: 100, advisorId: authStore.user.userId })
+    getStudentTopicPage({
+      current: 1,
+      size: 100,
+      grade: g,
+      advisorId: isAdmin.value ? undefined : authStore.user.userId
+    })
   ])
   pendingList.value = (pRes.data || []).filter(r => !r.teacherAction)
   assignedList.value = aRes.data?.records || aRes.data || []

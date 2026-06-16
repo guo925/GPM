@@ -83,9 +83,7 @@
           <el-input v-model="dialog.form.studentNo" />
         </el-form-item>
         <el-form-item label="年级" prop="grade">
-          <el-select v-model="dialog.form.grade" filterable allow-create clearable default-first-option placeholder="请选择或输入年级" style="width:100%">
-            <el-option v-for="g in grades" :key="g" :label="g + ' 届'" :value="g" />
-          </el-select>
+          <el-input v-model="dialog.form.grade" clearable placeholder="请输入年级，如 2028" />
         </el-form-item>
         <el-form-item label="学院" prop="collegeId">
           <el-select v-model="dialog.form.collegeId" clearable filterable placeholder="请选择学院" style="width:100%" @change="handleCollegeChange">
@@ -241,6 +239,7 @@ const handleSubmit = async () => {
   if (!valid) return
   dialog.loading = true
   try {
+    dialog.form.grade = String(dialog.form.grade || '').trim()
     if (dialog.isEdit) {
       await updateUser(dialog.form)
       ElMessage.success('修改成功')

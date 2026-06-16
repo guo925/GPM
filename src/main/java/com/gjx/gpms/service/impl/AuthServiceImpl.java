@@ -9,6 +9,7 @@ import com.gjx.gpms.entity.Major;
 import com.gjx.gpms.mapper.CollegeMapper;
 import com.gjx.gpms.mapper.MajorMapper;
 import com.gjx.gpms.system.entity.User;
+import com.gjx.gpms.system.mapper.PermissionMapper;
 import com.gjx.gpms.system.mapper.UserMapper;
 import com.gjx.gpms.system.mapper.UserRoleMapper;
 import com.gjx.gpms.vo.LoginVO;
@@ -46,6 +47,8 @@ public class AuthServiceImpl implements AuthService {
     private final RedisCacheService redisCacheService;
 
     private final UserRoleMapper userRoleMapper;
+
+    private final PermissionMapper permissionMapper;
 
     private final UserMapper userMapper;
 
@@ -104,6 +107,22 @@ public class AuthServiceImpl implements AuthService {
         fillUserProfile(vo, loginUser.getUserId());
         vo.setRoles(roles);
         vo.setPermissions(permissions);
+        return vo;
+    }
+
+    @Override
+    public LoginVO currentUser(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+
+        LoginVO vo = new LoginVO();
+        vo.setUserId(userId);
+        vo.setUsername(user.getUsername());
+        fillUserProfile(vo, userId);
+        vo.setRoles(userRoleMapper.selectRoleCodesByUserId(userId));
+        vo.setPermissions(permissionMapper.selectPermsByUserId(userId));
         return vo;
     }
 

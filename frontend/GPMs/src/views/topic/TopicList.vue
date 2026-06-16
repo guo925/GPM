@@ -119,7 +119,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="所属批次" prop="batchId">
-          <el-select v-model="form.batchId" placeholder="请选择批次" :disabled="isEdit" style="width:100%">
+          <el-select v-model="form.batchId" placeholder="请选择批次" :disabled="isEdit" filterable style="width:100%">
             <el-option v-for="b in topicBatches" :key="b.id" :label="batchLabel(b)" :value="b.id" />
           </el-select>
         </el-form-item>
@@ -169,6 +169,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { getTopicPage, createTopic, updateTopic, deleteTopic, reviewTopic } from '@/api/topic'
 import { getBatchPage, getDistinctGrades } from '@/api/batch'
+import { getCollegeList } from '@/api/college'
+import { getMajorList } from '@/api/major'
 import { submitPreferences, getMySelections } from '@/api/selection'
 import { useAuthStore, hasAnyRole } from '@/stores/auth'
 import { getSelectedGrade, setSelectedGrade } from '@/utils/batchContext'
@@ -197,32 +199,18 @@ const isEdit = ref(false)
 const formRef = ref(null)
 const editId = ref(null)
 const form = ref({ grade: '', collegeId: null, majorId: null, batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' })
-const colleges = computed(() => {
-  const map = new Map()
-  batches.value.forEach(batch => {
-    if (batch.collegeId && !map.has(batch.collegeId)) {
-      map.set(batch.collegeId, { id: batch.collegeId, name: batch.collegeName || String(batch.collegeId) })
-    }
-  })
-  return [...map.values()]
-})
-const majors = computed(() => {
-  const map = new Map()
-  batches.value.forEach(batch => {
-    if (batch.majorId && !map.has(batch.majorId)) {
-      map.set(batch.majorId, { id: batch.majorId, collegeId: batch.collegeId, name: batch.majorName || String(batch.majorId) })
-    }
-  })
-  return [...map.values()]
-})
+const sameValue = (left, right) => String(left ?? '') === String(right ?? '')
+const sameGrade = (left, right) => String(left ?? '').replace(/\s*届\s*$/, '') === String(right ?? '').replace(/\s*届\s*$/, '')
+const colleges = ref([])
+const majors = ref([])
 const topicMajors = computed(() => {
   if (!form.value.collegeId) return majors.value
-  return majors.value.filter(m => m.collegeId === form.value.collegeId)
+  return majors.value.filter(m => sameValue(m.collegeId, form.value.collegeId))
 })
 const topicBatches = computed(() => batches.value.filter(batch =>
-  (!form.value.grade || batch.grade === form.value.grade)
-  && (!form.value.collegeId || batch.collegeId === form.value.collegeId)
-  && (!form.value.majorId || batch.majorId === form.value.majorId)
+  (!form.value.grade || sameGrade(batch.grade, form.value.grade))
+  && (!form.value.collegeId || sameValue(batch.collegeId, form.value.collegeId))
+  && (!form.value.majorId || sameValue(batch.majorId, form.value.majorId))
 ))
 const rules = {
   grade: [{ required: true, message: '请选择年级', trigger: 'change' }],
@@ -235,23 +223,29 @@ const rules = {
 
 const batchLabel = (batch) => `${batch.name}（${batch.grade} 届 / ${batch.collegeName || '-'} / ${batch.majorName || '-'}）`
 
-const handleTopicGradeChange = () => {
-  if (form.value.batchId && !topicBatches.value.some(batch => batch.id === form.value.batchId)) {
+const syncTopicBatch = () => {
+  if (form.value.batchId && !topicBatches.value.some(batch => sameValue(batch.id, form.value.batchId))) {
     form.value.batchId = null
   }
+  if (!form.value.batchId && topicBatches.value.length === 1) {
+    form.value.batchId = topicBatches.value[0].id
+  }
+}
+
+const handleTopicGradeChange = () => {
+  syncTopicBatch()
 }
 
 const handleTopicCollegeChange = () => {
-  if (form.value.majorId && !topicMajors.value.some(major => major.id === form.value.majorId)) {
+  if (form.value.majorId && !topicMajors.value.some(major => sameValue(major.id, form.value.majorId))) {
     form.value.majorId = null
   }
   form.value.batchId = null
+  syncTopicBatch()
 }
 
 const handleTopicMajorChange = () => {
-  if (form.value.batchId && !topicBatches.value.some(batch => batch.id === form.value.batchId)) {
-    form.value.batchId = null
-  }
+  syncTopicBatch()
 }
 
 const canSelect = (row) => {
@@ -318,6 +312,13 @@ const loadSubmittedTopics = async () => {
 const loadBatches = async () => {
   const res = await getBatchPage({ current: 1, size: 100 })
   batches.value = res.data.records
+  syncTopicBatch()
+}
+
+const loadCollegesAndMajors = async () => {
+  const [collegeRes, majorRes] = await Promise.all([getCollegeList(), getMajorList()])
+  colleges.value = collegeRes.data || []
+  majors.value = majorRes.data || []
 }
 
 const loadGrades = async () => {
@@ -352,6 +353,7 @@ const handleAdd = () => {
   isEdit.value = false
   editId.value = null
   form.value = { grade: query.value.grade || '', collegeId: null, majorId: null, batchId: null, title: '', description: '', source: 'preset', maxCapacity: 1, filePath: '' }
+  syncTopicBatch()
   dialogVisible.value = true
 }
 
@@ -421,6 +423,7 @@ const handleSubmit = async () => {
 }
 
 onMounted(async () => {
+  await loadCollegesAndMajors()
   await loadGrades()
   await loadBatches()
   loadData()

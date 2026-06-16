@@ -353,9 +353,9 @@ const saveForm = async () => {
 }
 
 const beforeUpload = (file) => {
-  const maxSize = 50 * 1024 * 1024
+  const maxSize = 200 * 1024 * 1024
   if (file.size > maxSize) {
-    ElMessage.warning('文件大小不能超过50MB')
+    ElMessage.warning('文件大小不能超过200MB')
     return false
   }
   return true
@@ -422,8 +422,21 @@ const removeRow = async (row) => {
 }
 
 const exportRows = () => {
-  const content = filteredRows.value.map(row => `${row.studentNo},${row.studentName},${row.title},${statusLabel(row.status)},${row.score ?? ''}`).join('\n')
-  const blob = new Blob([`学号,学生,标题,状态,分数\n${content}`], { type: 'text/csv;charset=utf-8' })
+  if (!filteredRows.value.length) {
+    ElMessage.warning('暂无可导出的数据')
+    return
+  }
+  const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
+  const header = ['学号', '学生', '标题', '状态', '分数']
+  const body = filteredRows.value.map(row => [
+    row.studentNo,
+    row.studentName,
+    row.title,
+    statusLabel(row.status),
+    row.score ?? ''
+  ].map(escapeCsv).join(','))
+  const csv = [header.map(escapeCsv).join(','), ...body].join('\n')
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url

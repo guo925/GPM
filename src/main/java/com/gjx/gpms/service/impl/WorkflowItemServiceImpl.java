@@ -49,6 +49,10 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
             throw new BusinessException("流程类型不能为空");
         }
         List<Long> batchIds = resolveBatchIds(batchId, grade);
+        if (batchIds != null && batchIds.isEmpty()) {
+            return List.of();
+        }
+        syncProcessInstancesToWorkflowItems(workflowType, batchIds);
         LambdaQueryWrapper<WorkflowItem> wrapper = new LambdaQueryWrapper<WorkflowItem>()
                 .eq(WorkflowItem::getWorkflowType, workflowType)
                 .in(batchIds != null && !batchIds.isEmpty(), WorkflowItem::getBatchId, batchIds)
@@ -119,6 +123,8 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
         }
         BeanUtils.copyProperties(dto, item);
         fillCurrentStudentInfo(item, dto);
+        StudentTopic studentTopic = validateWorkflowStudent(item);
+        fillVerifiedRelationInfo(item, studentTopic);
         if (!StringUtils.hasText(item.getStudentName()) || !StringUtils.hasText(item.getStudentNo())) {
             throw new BusinessException("学生姓名和学号不能为空");
         }
@@ -234,6 +240,69 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
         }
     }
 
+    private StudentTopic validateWorkflowStudent(WorkflowItem item) {
+        User student = resolveStudent(item);
+        if (student == null) {
+            throw new BusinessException("学生不存在或学号不匹配");
+        }
+        if (StringUtils.hasText(item.getStudentName())
+                && StringUtils.hasText(student.getRealName())
+                && !item.getStudentName().equals(student.getRealName())
+                && !item.getStudentName().equals(student.getUsername())) {
+            throw new BusinessException("学生姓名与学号不匹配");
+        }
+        StudentTopic relation = selectActiveStudentTopic(student.getId(), item.getBatchId());
+        if (relation == null) {
+            throw new BusinessException("该学生没有有效选题记录");
+        }
+        User advisor = userMapper.selectById(relation.getAdvisorId());
+        if (advisor == null) {
+            throw new BusinessException("指导教师不存在");
+        }
+        if (StringUtils.hasText(item.getAdvisorName())
+                && !item.getAdvisorName().equals(advisor.getRealName())
+                && !item.getAdvisorName().equals(advisor.getUsername())) {
+            throw new BusinessException("指导教师与选题记录不匹配");
+        }
+        return relation;
+    }
+
+    private void fillVerifiedRelationInfo(WorkflowItem item, StudentTopic relation) {
+        User student = userMapper.selectById(relation.getStudentId());
+        User advisor = userMapper.selectById(relation.getAdvisorId());
+        item.setStudentName(StringUtils.hasText(student.getRealName()) ? student.getRealName() : student.getUsername());
+        item.setStudentNo(resolveStudentNo(student));
+        item.setBatchId(relation.getBatchId());
+        item.setAdvisorName(StringUtils.hasText(advisor.getRealName()) ? advisor.getRealName() : advisor.getUsername());
+    }
+
+    private User resolveStudent(WorkflowItem item) {
+        if (!StringUtils.hasText(item.getStudentNo())) {
+            return null;
+        }
+        return userMapper.selectOne(
+                new LambdaQueryWrapper<User>()
+                        .and(wrapper -> wrapper
+                                .eq(User::getStudentNo, item.getStudentNo())
+                                .or()
+                                .eq(User::getUsername, item.getStudentNo()))
+                        .last("LIMIT 1")
+        );
+    }
+
+    private StudentTopic selectActiveStudentTopic(Long studentId, Long batchId) {
+        LambdaQueryWrapper<StudentTopic> wrapper = new LambdaQueryWrapper<StudentTopic>()
+                .eq(StudentTopic::getStudentId, studentId)
+                .eq(StudentTopic::getStatus, "active")
+                .orderByDesc(StudentTopic::getAllocationTime)
+                .orderByDesc(StudentTopic::getCreatedAt)
+                .last("LIMIT 1");
+        if (batchId != null) {
+            wrapper.eq(StudentTopic::getBatchId, batchId);
+        }
+        return studentTopicMapper.selectOne(wrapper);
+    }
+
     private List<Long> resolveBatchIds(Long batchId, String grade) {
         if (grade != null && !grade.isBlank()) {
             return batchMapper.selectList(
@@ -270,6 +339,102 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
 
     private String resolveStudentNo(User student) {
         return StringUtils.hasText(student.getStudentNo()) ? student.getStudentNo() : student.getUsername();
+    }
+
+    private void syncProcessInstancesToWorkflowItems(String workflowType, List<Long> batchIds) {
+        String stage = toProcessStage(workflowType);
+        if (!StringUtils.hasText(stage)) {
+            return;
+        }
+
+        List<StudentTopic> relations = studentTopicMapper.selectList(
+                new LambdaQueryWrapper<StudentTopic>()
+                        .in(batchIds != null && !batchIds.isEmpty(), StudentTopic::getBatchId, batchIds)
+                        .eq(StudentTopic::getStatus, "active")
+        );
+        if (relations.isEmpty()) {
+            return;
+        }
+
+        List<Long> studentTopicIds = relations.stream().map(StudentTopic::getId).collect(Collectors.toList());
+        List<ProcessInstance> processes = processInstanceMapper.selectList(
+                new LambdaQueryWrapper<ProcessInstance>()
+                        .in(ProcessInstance::getStudentTopicId, studentTopicIds)
+                        .eq(ProcessInstance::getStage, stage)
+        );
+        if (processes.isEmpty()) {
+            return;
+        }
+
+        java.util.Map<Long, StudentTopic> relationMap = relations.stream()
+                .collect(Collectors.toMap(StudentTopic::getId, relation -> relation, (left, right) -> left));
+        for (ProcessInstance process : processes) {
+            syncWorkflowItemFromProcess(workflowType, process, relationMap.get(process.getStudentTopicId()));
+        }
+    }
+
+    private void syncWorkflowItemFromProcess(String workflowType, ProcessInstance process, StudentTopic relation) {
+        if (relation == null) {
+            return;
+        }
+        User student = userMapper.selectById(relation.getStudentId());
+        User advisor = userMapper.selectById(relation.getAdvisorId());
+        if (student == null || advisor == null) {
+            return;
+        }
+        String studentNo = resolveStudentNo(student);
+        WorkflowItem item = workflowItemMapper.selectOne(
+                new LambdaQueryWrapper<WorkflowItem>()
+                        .eq(WorkflowItem::getWorkflowType, workflowType)
+                        .eq(WorkflowItem::getBatchId, relation.getBatchId())
+                        .eq(WorkflowItem::getStudentNo, studentNo)
+                        .last("LIMIT 1")
+        );
+        boolean isNew = item == null;
+        if (isNew) {
+            item = new WorkflowItem();
+            item.setWorkflowType(workflowType);
+            item.setBatchId(relation.getBatchId());
+            item.setCreatedBy(process.getSubmitterId());
+            item.setCreatedAt(process.getCreatedAt() != null ? process.getCreatedAt() : LocalDateTime.now());
+        }
+        item.setStudentName(StringUtils.hasText(student.getRealName()) ? student.getRealName() : student.getUsername());
+        item.setStudentNo(studentNo);
+        item.setAdvisorName(StringUtils.hasText(advisor.getRealName()) ? advisor.getRealName() : advisor.getUsername());
+        item.setTitle(buildWorkflowTitle(process.getStage()));
+        item.setExtra(process.getFilePath());
+        item.setRemark(process.getContent());
+        item.setStatus(toWorkflowStatus(process.getStatus()));
+        item.setComment(process.getReviewComment());
+        item.setUpdatedBy(process.getReviewerId() != null ? process.getReviewerId() : process.getSubmitterId());
+        item.setUpdatedAt(process.getUpdatedAt() != null ? process.getUpdatedAt() : LocalDateTime.now());
+        if (isNew) {
+            workflowItemMapper.insert(item);
+        } else {
+            workflowItemMapper.updateById(item);
+        }
+    }
+
+    private String toWorkflowStatus(String status) {
+        return switch (status) {
+            case "approved", "rejected" -> status;
+            default -> "pending";
+        };
+    }
+
+    private String buildWorkflowTitle(String stage) {
+        String label = switch (stage) {
+            case "task_book" -> "任务书";
+            case "opening_report" -> "开题报告";
+            case "opening_defense" -> "开题答辩";
+            case "guidance_week" -> "指导周记";
+            case "midterm_check" -> "中期检查";
+            case "thesis_draft" -> "论文指导";
+            case "thesis_final" -> "论文终稿";
+            case "post_defense_modify" -> "答辩后修改";
+            default -> stage;
+        };
+        return label + "提交";
     }
 
     private void syncProcessInstance(WorkflowItem item) {
@@ -341,30 +506,11 @@ public class WorkflowItemServiceImpl implements WorkflowItemService {
     }
 
     private StudentTopic resolveStudentTopic(WorkflowItem item) {
-        if (!StringUtils.hasText(item.getStudentNo())) {
-            return null;
-        }
-        User student = userMapper.selectOne(
-                new LambdaQueryWrapper<User>()
-                        .and(wrapper -> wrapper
-                                .eq(User::getStudentNo, item.getStudentNo())
-                                .or()
-                                .eq(User::getUsername, item.getStudentNo()))
-                        .last("LIMIT 1")
-        );
+        User student = resolveStudent(item);
         if (student == null) {
             return null;
         }
-        LambdaQueryWrapper<StudentTopic> wrapper = new LambdaQueryWrapper<StudentTopic>()
-                .eq(StudentTopic::getStudentId, student.getId())
-                .eq(StudentTopic::getStatus, "active")
-                .orderByDesc(StudentTopic::getAllocationTime)
-                .orderByDesc(StudentTopic::getCreatedAt)
-                .last("LIMIT 1");
-        if (item.getBatchId() != null) {
-            wrapper.eq(StudentTopic::getBatchId, item.getBatchId());
-        }
-        return studentTopicMapper.selectOne(wrapper);
+        return selectActiveStudentTopic(student.getId(), item.getBatchId());
     }
 
     private String toProcessStage(String workflowType) {

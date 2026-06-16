@@ -321,7 +321,7 @@ const router = createRouter({
           path: 'teacher/selection-review',
           name: 'SelectionReview',
           component: () => import('@/views/teacher/SelectionReview.vue'),
-          meta: { title: '选题审核' }
+          meta: { title: '选题审核', roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN', 'COLLEGE_ADMIN', 'GRADE_ADMIN', 'MAJOR_ADMIN', 'TEACHER'] }
         },
         {
           path: 'teacher/guidance-review',

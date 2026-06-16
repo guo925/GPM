@@ -1,8 +1,6 @@
 package com.gjx.gpms.system.controller;
 
 import com.gjx.gpms.common.result.Result;
-import com.gjx.gpms.cache.CacheKeys;
-import com.gjx.gpms.cache.RedisCacheService;
 import com.gjx.gpms.system.vo.StatisticsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,7 +10,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.time.Duration;
 
 /**
  * Statistics 控制器。
@@ -24,7 +21,6 @@ import java.time.Duration;
 public class StatisticsController {
 
     private final JdbcTemplate jdbcTemplate;
-    private final RedisCacheService redisCacheService;
 
     /**
      * 获取总览统计数据
@@ -33,14 +29,7 @@ public class StatisticsController {
     @GetMapping("/overview")
     @PreAuthorize("hasAuthority('batch:page')")
     public Result<StatisticsVO> overview() {
-        StatisticsVO cached = redisCacheService.getOrLoad(
-                CacheKeys.DASHBOARD_STATISTICS,
-                StatisticsVO.class,
-                Duration.ofMinutes(5),
-                60,
-                this::buildOverview
-        );
-        return Result.success(cached);
+        return Result.success(buildOverview());
     }
 
     /**
@@ -56,9 +45,9 @@ public class StatisticsController {
         // 用户（排除逻辑删除的）
         vo.setTotalUsers(queryInt("SELECT COUNT(*) FROM sys_user WHERE is_deleted = 0"));
         vo.setTotalTeachers(queryInt(
-            "SELECT COUNT(*) FROM sys_user u INNER JOIN sys_user_role ur ON u.id=ur.user_id WHERE ur.role_id=6 AND u.is_deleted = 0"));
+            "SELECT COUNT(DISTINCT u.id) FROM sys_user u INNER JOIN sys_user_role ur ON u.id=ur.user_id INNER JOIN sys_role r ON r.id=ur.role_id WHERE r.role_code='TEACHER' AND u.is_deleted = 0"));
         vo.setTotalStudents(queryInt(
-            "SELECT COUNT(*) FROM sys_user u INNER JOIN sys_user_role ur ON u.id=ur.user_id WHERE ur.role_id=7 AND u.is_deleted = 0"));
+            "SELECT COUNT(DISTINCT u.id) FROM sys_user u INNER JOIN sys_user_role ur ON u.id=ur.user_id INNER JOIN sys_role r ON r.id=ur.role_id WHERE r.role_code='STUDENT' AND u.is_deleted = 0"));
 
         // 批次
         vo.setTotalBatches(count("batch"));
@@ -76,8 +65,8 @@ public class StatisticsController {
 
         // 各阶段完成数量
         List<Map<String, Object>> stageStats = new ArrayList<>();
-        String[] stages = {"task_book","opening_report","opening_defense","guidance_week","midterm_check","thesis_draft","thesis_final","post_defense_modify"};
-        String[] labels = {"任务书","开题报告","开题答辩","指导周记","中期检查","论文初稿","论文终稿","答辩后修改"};
+        String[] stages = {"task_book","opening_report","opening_defense","guidance_week","midterm_check","thesis_guidance","defense","post_defense_modify","thesis_final"};
+        String[] labels = {"任务书","开题报告","开题答辩","指导周记","中期检查","论文指导","答辩","答辩后修改","论文终稿"};
         for (int i = 0; i < stages.length; i++) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("stage", stages[i]);
@@ -95,7 +84,6 @@ public class StatisticsController {
         for (String[] g : grades) {
             int cnt = 0;
             try {
-                String sql = "SELECT COUNT(*) FROM score_sheet WHERE grade_level IN ('" + g[0] + "','优秀','良好','中等')";
                 if ("优".equals(g[0])) cnt = queryInt("SELECT COUNT(*) FROM score_sheet WHERE grade_level IN ('优','优秀')");
                 else if ("良".equals(g[0])) cnt = queryInt("SELECT COUNT(*) FROM score_sheet WHERE grade_level IN ('良','良好')");
                 else if ("中".equals(g[0])) cnt = queryInt("SELECT COUNT(*) FROM score_sheet WHERE grade_level IN ('中','中等')");

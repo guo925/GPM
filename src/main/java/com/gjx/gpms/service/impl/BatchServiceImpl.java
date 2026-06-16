@@ -1,5 +1,7 @@
 package com.gjx.gpms.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,10 +28,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.time.Duration;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.stream.Collectors;
 
 /**
@@ -42,10 +48,28 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements BatchService {
 
+    private record StageConfig(String key, String label) {}
+
+    private static final List<StageConfig> STAGE_ORDER = List.of(
+            new StageConfig("topic_selection", "选题阶段"),
+            new StageConfig("task_book", "任务书"),
+            new StageConfig("opening_report", "开题报告"),
+            new StageConfig("opening_defense", "开题答辩"),
+            new StageConfig("guidance", "指导记录"),
+            new StageConfig("midterm", "中期检查"),
+            new StageConfig("thesis_guidance", "论文指导"),
+            new StageConfig("defense", "答辩"),
+            new StageConfig("thesis_revision", "答辩后修改"),
+            new StageConfig("thesis_final", "论文终稿"),
+            new StageConfig("scoring", "成绩评定"),
+            new StageConfig("score_review", "成绩审核")
+    );
+
     private final CollegeMapper collegeMapper;
     private final MajorMapper majorMapper;
     private final RedisCacheService redisCacheService;
     private final UserMapper userMapper;
+    private final ObjectMapper objectMapper;
 
     /**
      * 分页查询相关逻辑。
@@ -182,6 +206,8 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
     @Override
     public void create(BatchCreateDTO dto) {
         log.info("新增批次：{}", dto.getName());
+        validateGrade(dto.getGrade());
+        validateStageTimes(dto.getConfig());
 
         Batch entity = new Batch();
         BeanUtils.copyProperties(dto, entity);
@@ -201,6 +227,7 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
     @Override
     public void update(BatchUpdateDTO dto) {
         log.info("修改批次：{}", dto.getId());
+        validateStageTimes(dto.getConfig());
 
         Batch entity = this.getById(dto.getId());
         if (entity == null) {
@@ -218,6 +245,74 @@ public class BatchServiceImpl extends ServiceImpl<BatchMapper, Batch> implements
         redisCacheService.delete(CacheKeys.BATCH_CURRENT);
 
         log.info("修改批次成功：{}", dto.getId());
+    }
+
+    private void validateStageTimes(String configText) {
+        if (configText == null || configText.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(configText);
+            JsonNode config = root.has("stages") ? root.get("stages") : root;
+            LocalDateTime previousEnd = null;
+            String previousLabel = null;
+            for (StageConfig stage : STAGE_ORDER) {
+                LocalDateTime start = readDateTime(config, stage.key() + "_start", stage.key() + "Start");
+                LocalDateTime end = readDateTime(config, stage.key() + "_end", stage.key() + "End");
+                if (start != null && end != null && !end.isAfter(start)) {
+                    throw new BusinessException(stage.label() + "结束时间必须晚于开始时间");
+                }
+                if (start != null && previousEnd != null && start.isBefore(previousEnd)) {
+                    throw new BusinessException(stage.label() + "开始时间不能早于" + previousLabel + "结束时间");
+                }
+                if (end != null) {
+                    previousEnd = end;
+                    previousLabel = stage.label();
+                }
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("时间节点配置格式不正确");
+        }
+    }
+
+    private void validateGrade(String grade) {
+        if (grade == null || grade.isBlank()) {
+            throw new BusinessException("年级不能为空");
+        }
+        if (!grade.matches("^\\d{4}届?$")) {
+            throw new BusinessException("年级格式必须为4位年份或4位年份加届，例如2028届");
+        }
+    }
+
+    private LocalDateTime readDateTime(JsonNode config, String snakeKey, String camelKey) {
+        JsonNode node = config.get(snakeKey);
+        if (node == null || node.isNull() || node.asText().isBlank()) {
+            node = config.get(camelKey);
+        }
+        if (node == null || node.isNull() || node.asText().isBlank()) {
+            return null;
+        }
+        return parseDateTime(node.asText().trim());
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        String normalized = value.replace('T', ' ');
+        for (DateTimeFormatter formatter : List.of(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        )) {
+            try {
+                return LocalDateTime.parse(normalized, formatter);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+        try {
+            return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+        } catch (DateTimeParseException e) {
+            throw new BusinessException("时间节点配置格式不正确");
+        }
     }
 
     /**

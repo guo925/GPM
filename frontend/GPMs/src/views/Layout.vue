@@ -151,16 +151,16 @@
           <el-menu-item index="/student/score">我的成绩</el-menu-item>
         </el-sub-menu>
 
-        <!-- 教师专区：仅教师可见 -->
-        <el-sub-menu index="teacher-area" v-if="checkRole(['TEACHER'])">
+        <!-- 教师专区：教师与管理员可见 -->
+        <el-sub-menu index="teacher-area" v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])">
           <template #title>
             <el-icon><Avatar /></el-icon>
             <span>教师专区</span>
           </template>
-          <el-menu-item index="/teacher/selection-review">选题审核</el-menu-item>
-          <el-menu-item index="/teacher/guidance-review">指导记录</el-menu-item>
-          <el-menu-item index="/teacher/process-review">流程审核</el-menu-item>
-          <el-menu-item index="/teacher/score-entry">成绩评定</el-menu-item>
+          <el-menu-item v-if="checkRole(['SUPER_ADMIN','UNIVERSITY_ADMIN','COLLEGE_ADMIN','GRADE_ADMIN','MAJOR_ADMIN','TEACHER'])" index="/teacher/selection-review">选题审核</el-menu-item>
+          <el-menu-item v-if="checkRole(['TEACHER'])" index="/teacher/guidance-review">指导记录</el-menu-item>
+          <el-menu-item v-if="checkRole(['TEACHER'])" index="/teacher/process-review">流程审核</el-menu-item>
+          <el-menu-item v-if="checkRole(['TEACHER'])" index="/teacher/score-entry">成绩评定</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>

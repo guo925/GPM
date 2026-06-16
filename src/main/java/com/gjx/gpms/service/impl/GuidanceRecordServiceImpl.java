@@ -50,6 +50,9 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
         if (st == null) {
             throw new BusinessException("选题记录不存在");
         }
+        if (!userId.equals(st.getStudentId())) {
+            throw new BusinessException("只能提交本人的指导记录");
+        }
 
         GuidanceRecord record = new GuidanceRecord();
         record.setStudentTopicId(dto.getStudentTopicId());
@@ -72,6 +75,13 @@ public class GuidanceRecordServiceImpl extends ServiceImpl<GuidanceRecordMapper,
         GuidanceRecord record = this.getById(id);
         if (record == null) {
             throw new BusinessException("指导记录不存在");
+        }
+        StudentTopic st = studentTopicMapper.selectById(record.getStudentTopicId());
+        if (st == null) {
+            throw new BusinessException("选题记录不存在");
+        }
+        if (!UserContext.getUserId().equals(st.getAdvisorId())) {
+            throw new BusinessException("只能审核本人指导学生的记录");
         }
 
         record.setStatus("reviewed");

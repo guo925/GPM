@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MaxUploadSizeExceededException.class, MultipartException.class})
     public Result<Void> handleUploadException(Exception e) {
         log.error("文件上传失败：{}", e.getMessage());
-        return Result.error("文件大小不能超过50MB");
+        return Result.error("文件大小不能超过200MB");
     }
 
     /**

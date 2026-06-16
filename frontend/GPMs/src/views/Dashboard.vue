@@ -28,12 +28,18 @@
         <p class="action-card__meta">整体进度、选题和成绩概览</p>
         <el-button type="primary" text>进入</el-button>
       </div>
+      <div class="action-card" @click="$router.push(withSelectedGradeQuery('/teacher/selection-review'))">
+        <div class="action-card__icon"><el-icon><Select /></el-icon></div>
+        <h3 class="action-card__title">选题审核</h3>
+        <p class="action-card__meta">查看学生提交的选题志愿</p>
+        <el-button type="primary" text>进入</el-button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { DataAnalysis, User, UserFilled } from '@element-plus/icons-vue'
+import { DataAnalysis, Select, User, UserFilled } from '@element-plus/icons-vue'
 import WorkbenchOverview from '@/views/components/WorkbenchOverview.vue'
 import { withSelectedGradeQuery } from '@/utils/batchContext'
 </script>

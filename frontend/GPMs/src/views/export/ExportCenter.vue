@@ -53,6 +53,10 @@ const loadScores = async () => {
 const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
 
 const downloadCsv = () => {
+  if (!rows.value.length) {
+    ElMessage.warning('暂无可导出的数据')
+    return
+  }
   const header = ['学生', '导师', '总分', '等级', '状态']
   const body = rows.value.map(row => [row.studentName, row.advisorName, row.finalScore, row.gradeLevel, row.status].map(escapeCsv).join(','))
   const csv = [header.map(escapeCsv).join(','), ...body].join('\n')

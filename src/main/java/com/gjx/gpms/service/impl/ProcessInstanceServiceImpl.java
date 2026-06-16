@@ -9,10 +9,12 @@ import com.gjx.gpms.entity.ProcessInstance;
 import com.gjx.gpms.entity.StudentTopic;
 import com.gjx.gpms.entity.Topic;
 import com.gjx.gpms.entity.AuditLog;
+import com.gjx.gpms.entity.WorkflowItem;
 import com.gjx.gpms.mapper.AuditLogMapper;
 import com.gjx.gpms.mapper.ProcessInstanceMapper;
 import com.gjx.gpms.mapper.StudentTopicMapper;
 import com.gjx.gpms.mapper.TopicMapper;
+import com.gjx.gpms.mapper.WorkflowItemMapper;
 import com.gjx.gpms.security.context.UserContext;
 import com.gjx.gpms.service.ProcessInstanceService;
 import com.gjx.gpms.system.entity.User;
@@ -21,6 +23,7 @@ import com.gjx.gpms.vo.ProcessInstanceVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,6 +44,7 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
     private final TopicMapper topicMapper;
     private final UserMapper userMapper;
     private final AuditLogMapper auditLogMapper;
+    private final WorkflowItemMapper workflowItemMapper;
 
     /**
      * 提交相关逻辑。
@@ -80,6 +84,7 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
             existing.setVersion(existing.getVersion() + 1);
             existing.setSubmitterId(userId);
             this.updateById(existing);
+            syncWorkflowItem(existing);
             log.info("阶段[{}]重新提交，版本号：{}", dto.getStage(), existing.getVersion());
             return;
         }
@@ -97,6 +102,7 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         pi.setIsEditable((byte) 0);
 
         this.save(pi);
+        syncWorkflowItem(pi);
         log.info("阶段[{}]首次提交", dto.getStage());
     }
 
@@ -130,6 +136,7 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
         }
 
         this.updateById(pi);
+        syncWorkflowItem(pi);
         AuditLog auditLog = new AuditLog();
         auditLog.setProcessInstanceId(pi.getId());
         auditLog.setTargetType(pi.getStage());
@@ -220,5 +227,92 @@ public class ProcessInstanceServiceImpl extends ServiceImpl<ProcessInstanceMappe
      */
     private List<ProcessInstanceVO> toVOList(List<ProcessInstance> list) {
         return list.stream().map(this::toVO).collect(Collectors.toList());
+    }
+
+    private void syncWorkflowItem(ProcessInstance pi) {
+        String workflowType = toWorkflowType(pi.getStage());
+        if (!StringUtils.hasText(workflowType)) {
+            return;
+        }
+
+        StudentTopic st = studentTopicMapper.selectById(pi.getStudentTopicId());
+        if (st == null) {
+            return;
+        }
+        User student = userMapper.selectById(st.getStudentId());
+        User advisor = userMapper.selectById(st.getAdvisorId());
+        if (student == null || advisor == null) {
+            return;
+        }
+
+        String studentNo = StringUtils.hasText(student.getStudentNo()) ? student.getStudentNo() : student.getUsername();
+        WorkflowItem item = workflowItemMapper.selectOne(
+                new LambdaQueryWrapper<WorkflowItem>()
+                        .eq(WorkflowItem::getWorkflowType, workflowType)
+                        .eq(WorkflowItem::getBatchId, st.getBatchId())
+                        .eq(WorkflowItem::getStudentNo, studentNo)
+                        .last("LIMIT 1")
+        );
+        boolean isNew = item == null;
+        if (isNew) {
+            item = new WorkflowItem();
+            item.setWorkflowType(workflowType);
+            item.setBatchId(st.getBatchId());
+            item.setCreatedBy(pi.getSubmitterId());
+            item.setCreatedAt(pi.getCreatedAt() != null ? pi.getCreatedAt() : LocalDateTime.now());
+        }
+
+        item.setStudentName(StringUtils.hasText(student.getRealName()) ? student.getRealName() : student.getUsername());
+        item.setStudentNo(studentNo);
+        item.setAdvisorName(StringUtils.hasText(advisor.getRealName()) ? advisor.getRealName() : advisor.getUsername());
+        item.setTitle(buildWorkflowTitle(pi));
+        item.setExtra(pi.getFilePath());
+        item.setRemark(pi.getContent());
+        item.setStatus(toWorkflowStatus(pi.getStatus()));
+        item.setComment(pi.getReviewComment());
+        item.setUpdatedBy(pi.getReviewerId() != null ? pi.getReviewerId() : pi.getSubmitterId());
+        item.setUpdatedAt(pi.getUpdatedAt() != null ? pi.getUpdatedAt() : LocalDateTime.now());
+
+        if (isNew) {
+            workflowItemMapper.insert(item);
+        } else {
+            workflowItemMapper.updateById(item);
+        }
+    }
+
+    private String toWorkflowType(String stage) {
+        return switch (stage) {
+            case "task_book" -> "taskBook";
+            case "opening_report" -> "openingReport";
+            case "opening_defense" -> "openingDefense";
+            case "guidance_week" -> "weeklyLog";
+            case "midterm_check" -> "midterm";
+            case "thesis_draft" -> "thesisGuidance";
+            case "thesis_final" -> "finalThesis";
+            case "post_defense_modify" -> "postDefenseRevision";
+            default -> null;
+        };
+    }
+
+    private String toWorkflowStatus(String status) {
+        return switch (status) {
+            case "approved", "rejected" -> status;
+            default -> "pending";
+        };
+    }
+
+    private String buildWorkflowTitle(ProcessInstance pi) {
+        String label = switch (pi.getStage()) {
+            case "task_book" -> "任务书";
+            case "opening_report" -> "开题报告";
+            case "opening_defense" -> "开题答辩";
+            case "guidance_week" -> "指导周记";
+            case "midterm_check" -> "中期检查";
+            case "thesis_draft" -> "论文指导";
+            case "thesis_final" -> "论文终稿";
+            case "post_defense_modify" -> "答辩后修改";
+            default -> pi.getStage();
+        };
+        return label + "提交";
     }
 }

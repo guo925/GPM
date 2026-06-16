@@ -13,4 +13,9 @@ public interface AuthService {
      * 用户登录
      */
     LoginVO login(LoginDTO loginDTO);
+
+    /**
+     * 获取当前登录用户资料
+     */
+    LoginVO currentUser(Long userId);
 }

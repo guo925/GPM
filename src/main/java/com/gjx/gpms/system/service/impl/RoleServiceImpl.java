@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements RoleService {
 
+    private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
+
     private final RolePermissionMapper rolePermissionMapper;
     private final PermissionMapper permissionMapper;
 
@@ -96,6 +98,10 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         if (role == null) {
             throw new BusinessException("角色不存在");
         }
+        if (SUPER_ADMIN_ROLE.equals(role.getRoleCode())
+                && !SUPER_ADMIN_ROLE.equals(dto.getRoleCode())) {
+            throw new BusinessException("超级管理员角色编码禁止修改");
+        }
 
         // 编码唯一校验（排除自身）
         Long count = this.count(
@@ -148,6 +154,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
 
         if (role == null) {
             throw new BusinessException("角色不存在");
+        }
+        if (SUPER_ADMIN_ROLE.equals(role.getRoleCode())) {
+            throw new BusinessException("超级管理员角色禁止删除");
         }
 
         // 删除角色权限关联

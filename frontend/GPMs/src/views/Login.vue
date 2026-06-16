@@ -32,7 +32,7 @@
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" size="large"
-            show-password @keyup.enter="handleLogin">
+            autocomplete="current-password" @keyup.enter="handleLogin">
             <template #prefix><el-icon><Lock /></el-icon></template>
           </el-input>
         </el-form-item>
@@ -61,8 +61,8 @@ const formRef = ref()
 const loading = ref(false)
 
 const form = reactive({
-  username: 'admin',
-  password: 'admin123'
+  username: '',
+  password: ''
 })
 
 const rules = {

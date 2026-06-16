@@ -22,7 +22,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Grid, Tickets, User, Collection, DataAnalysis, Monitor } from '@element-plus/icons-vue'
+import { Grid, Tickets, User, Collection, DataAnalysis, Monitor, Select } from '@element-plus/icons-vue'
 import WorkbenchOverview from '@/views/components/WorkbenchOverview.vue'
 import { withSelectedBatchQuery } from '@/utils/batchContext'
 
@@ -32,6 +32,7 @@ const actions = [
   { title: '批次管理', desc: '创建并维护本学院毕业设计批次。', path: '/batch', icon: Tickets },
   { title: '用户管理', desc: '维护本学院教师、学生和管理账号。', path: '/system/user', icon: User },
   { title: '课题管理', desc: '审核本学院教师申报的课题。', path: '/topic', icon: Collection },
+  { title: '选题审核', desc: '查看本学院学生提交的选题志愿。', path: '/teacher/selection-review', icon: Select },
   { title: '数据统计', desc: '查看学院毕业设计整体进度。', path: '/statistics', icon: DataAnalysis },
   { title: '过程监控', desc: '通过批次与课题数据定位未完成事项。', path: '/batch', icon: Monitor }
 ]
